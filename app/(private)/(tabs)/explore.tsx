@@ -1,3 +1,9 @@
+import { View } from "react-native";
+
+export default function ExploreScreen() {
+	return <View />;
+}
+
 // import { Image } from 'expo-image';
 // import { Platform, StyleSheet } from 'react-native';
 
