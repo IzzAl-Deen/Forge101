@@ -35,6 +35,10 @@ export default function LandingScreen() {
 						</LinearGradient>
 					</Pressable>
 
+					<Pressable style={styles.previewBtn} onPress={() => router.push("/(public)/exercise-preview")}>
+						<Text style={styles.previewBtnText}>Preview Exercise Builder</Text>
+					</Pressable>
+
 					<View style={styles.dividerRow}>
 						<View style={styles.dividerLine} />
 						<Text style={styles.dividerText}>ALREADY A MEMBER</Text>
@@ -207,6 +211,21 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		fontWeight: "500",
 		color: Kinetic.white,
+	},
+	previewBtn: {
+		height: 46,
+		borderRadius: 10,
+		justifyContent: "center",
+		alignItems: "center",
+		borderWidth: 1,
+		borderColor: "rgba(184,255,26,0.28)",
+		backgroundColor: "rgba(184,255,26,0.07)",
+		marginTop: Spacing.sm,
+	},
+	previewBtnText: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: Kinetic.accentLight,
 	},
 	featureRow: {
 		flexDirection: "row",
