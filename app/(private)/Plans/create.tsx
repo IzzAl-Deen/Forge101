@@ -1,17 +1,16 @@
-import React from "react";
-import { Alert } from "react-native";
+import React, { useState } from "react";
+import { Alert, ScrollView, StyleSheet } from "react-native";
 import PlanForm from "@/components/planform";
 import Plans from "@/api/plansApi";
 import { supabase } from "@/lib/supabase";
 import { Plan } from "@/types/plan";
-import { ScrollView } from "react-native";
-import { StyleSheet, Text } from "react-native";
 import SuccessModal from "@/components/success-plan-modal";
-import { useState } from "react";
+import { PendingExercise } from "@/components/plan-exercises";
 
 
 export default function CreatePlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [exercises, setExercises] = useState<PendingExercise[]>([]);
 
   const handleCreate = async (
     data: Omit<Plan, "user_id">
@@ -24,10 +23,40 @@ export default function CreatePlanScreen() {
         return;
       }
 
-      await Plans.create({
+      const createdPlan = await Plans.create({
         ...data,
         user_id: session.user.id,
       });
+
+      const createdPlanId = Number(
+        createdPlan?.id ??
+        createdPlan?.plan?.id ??
+        createdPlan?.data?.id,
+      );
+
+      if (!createdPlanId) {
+        console.error("Create plan response:", createdPlan);
+        Alert.alert("Error", "Plan created but id was not found");
+        return;
+      }
+
+      let orderIndex = 1;
+
+      for (const exercise of exercises) {
+        const days = exercise.day.length > 0 ? exercise.day : ["monday"];
+
+        for (const day of days) {
+          await Plans.attachExercise(createdPlanId, {
+            exercise_id: exercise.exercise_id,
+            sets: Number(exercise.sets) || 0,
+            reps: Number(exercise.reps) || 0,
+            day,
+            order_index: orderIndex,
+          });
+
+          orderIndex += 1;
+        }
+      }
 
       setModalVisible(true);
     } catch (e) {
@@ -38,7 +67,12 @@ export default function CreatePlanScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <PlanForm submitLabel="SAVE PLAN" onSubmit={handleCreate} />
+      <PlanForm
+        exercises={exercises}
+        submitLabel="SAVE PLAN"
+        onSubmit={handleCreate}
+        onExercisesChange={setExercises}
+      />
 
 	    <SuccessModal
         visible={modalVisible}
