@@ -4,8 +4,14 @@ import PlanForm from "@/components/planform";
 import Plans from "@/api/plansApi";
 import { supabase } from "@/lib/supabase";
 import { Plan } from "@/types/plan";
+import { ScrollView } from "react-native";
+import { StyleSheet, Text } from "react-native";
+import SuccessModal from "@/components/success-plan-modal";
+import { useState } from "react";
+
 
 export default function CreatePlanScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
 
   const handleCreate = async (
     data: Omit<Plan, "user_id">
@@ -13,7 +19,6 @@ export default function CreatePlanScreen() {
     try {
       const { data: { session } } =
         await supabase.auth.getSession();
-
       if (!session?.user) {
         Alert.alert("Error", "Not authenticated");
         return;
@@ -24,7 +29,7 @@ export default function CreatePlanScreen() {
         user_id: session.user.id,
       });
 
-      Alert.alert("Success", "Plan created");
+      setModalVisible(true);
     } catch (e) {
       console.error(e);
       Alert.alert("Error", "Create failed");
@@ -32,9 +37,28 @@ export default function CreatePlanScreen() {
   };
 
   return (
-    <PlanForm
-      submitLabel="Create Plan"
-      onSubmit={handleCreate}
-    />
+    <ScrollView contentContainerStyle={styles.container}>
+      <PlanForm submitLabel="SAVE PLAN" onSubmit={handleCreate} />
+
+	    <SuccessModal
+        visible={modalVisible}
+        message="Plan created successfully!"
+        onClose={() => setModalVisible(false)}
+      />
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: "#121212",
+    padding: 24,
+  },
+  header: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 32,
+  },
+});

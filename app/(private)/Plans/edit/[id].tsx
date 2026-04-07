@@ -1,11 +1,17 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ActivityIndicator } from "react-native";
+import { Alert, ActivityIndicator, ScrollView } from "react-native";
 import Plans from "@/api/plansApi";
 import PlanForm from "@/components/planform";
 import { Plan } from "@/types/plan";
+import { StyleSheet, Text } from "react-native";
+import SuccessModal from "@/components/success-plan-modal";
+
+
 
 export default function EditPlanScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+
   const { id } = useLocalSearchParams();
 
   const [plan, setPlan] =
@@ -36,20 +42,48 @@ export default function EditPlanScreen() {
     try {
       await Plans.update(Number(id), updated as Plan);
 
-      Alert.alert("Success", "Plan updated");
+      setModalVisible(true);
     } catch (err) {
       console.error(err);
       Alert.alert("Update failed");
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await Plans.delete(Number(id));
+      setModalVisible(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Delete failed");
+    }
+  };
+
   if (!plan) return <ActivityIndicator />;
 
   return (
-    <PlanForm
-      initialValues={plan}
-      submitLabel="Update Plan"
-      onSubmit={handleUpdate}
-    />
+    <ScrollView contentContainerStyle={styles.container}>
+
+    <PlanForm initialValues={plan} submitLabel="UPDATE PLAN" onSubmit={handleUpdate} onDelete={handleDelete}/>
+    <SuccessModal
+        visible={modalVisible}
+        message="Success!"
+        onClose={() => setModalVisible(false)}
+      />
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: "#121212",
+    padding: 24,
+  },
+  header: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 32,
+  },
+});
