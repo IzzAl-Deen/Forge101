@@ -3,9 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ImageBackground, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import PlanExercises, { PendingExercise } from "./plan-exercises";
-
+import Exercise from "../api/exerciseApi";
+import Header from "./ui/header";
 
 type Props = {
   initialValues?: Omit<Plan, "user_id">;
@@ -105,6 +106,13 @@ export default function PlanForm({
       return;
     }
 
+    Exercise.delete(exercises[index].exercise_id).then(() => {
+      console.log("Exercise deleted successfully");
+    }).catch((err) => {
+      console.error("Failed to delete exercise:", err);
+    });
+
+
     onExercisesChange(exercises.filter((_, itemIndex) => itemIndex !== index));
   };
 
@@ -128,6 +136,9 @@ export default function PlanForm({
 
   return (
     <View style={styles.screen}>
+      <Header title={initialValues ? "Edit Plan" : "Create Plan"} />
+
+
 
       <View>
 
@@ -136,6 +147,14 @@ export default function PlanForm({
           style={styles.header}
           imageStyle={styles.headerImageRadius}
         >
+
+          <LinearGradient
+
+            colors={['transparent', 'rgba(0,0,0,0.4)', '#121212']} 
+            style={[styles.shadow, styles.headerImageRadius]}
+            locations={[0, 0.5, 1]} 
+          />
+
           <View style={styles.headerOverlay}>
             <Text style={styles.smallTitle}>NEW ROUTINE</Text>
             <Text style={styles.bigTitle}>
@@ -223,7 +242,6 @@ export default function PlanForm({
             onChange={updateExercise}
           />
 
-
           <TouchableOpacity onPress={() => onSubmit(form)}>
             <LinearGradient
               colors={["#eff8c6", "#ccff00"]}
@@ -241,7 +259,7 @@ export default function PlanForm({
               style={styles.deleteButton}
               onPress={onDelete}
             >
-              <Text style={styles.deleteText}>DELETE</Text>
+              <Text style={styles.deleteText}>DELETE PLAN</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -267,9 +285,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
 
+  shadow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '80%',
+  },
+
   headerOverlay: {
     padding: 18,
   },
+
+
 
   smallTitle: {
     color: "#ccff00",
