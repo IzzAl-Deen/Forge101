@@ -132,7 +132,12 @@ const randomImages = [
             <Text style={styles.heroTag}>PHASE 01: FOUNDATION</Text>
             <Text style={styles.heroTitle}>REFINE THE <Text style={{ color: '#cefc22' }}>ENGINE.</Text></Text>
           </View>
-          <TouchableOpacity style={styles.addBtn}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => 
+         router.push({
+        pathname: '/(private)/Plans/edit/[id]',
+        params: { id: id }
+             })
+}>
             <MaterialIcons name="add-box" size={20} color="#000" />
             <Text style={styles.addBtnText}>ADD EXERCISE</Text>
           </TouchableOpacity>
