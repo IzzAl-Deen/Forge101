@@ -226,7 +226,7 @@ export default function PlanForm({
 
           <TouchableOpacity onPress={() => onSubmit(form)}>
             <LinearGradient
-              colors={["#eaff3b", "#ccff00"]}
+              colors={["#eff8c6", "#ccff00"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.saveButton}

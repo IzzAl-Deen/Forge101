@@ -141,7 +141,7 @@ export default function ExerciseDetailsScreen() {
     const selectedExercises = JSON.stringify(items);
 
     router.replace({
-      pathname: returnTo as "/(private)/Plans/create" | "/(private)/Plans/edit/[id]",
+      pathname: returnTo as "/(private)/plans/create" | "/(private)/plans/edit/[id]",
       params: {
         id: returnId || planId || "",
         selectedExercises,

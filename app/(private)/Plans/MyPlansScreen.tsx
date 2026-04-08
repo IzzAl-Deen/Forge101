@@ -78,7 +78,7 @@ const MyPlansScreen = () => {
             style={styles.viewBtn}
             onPress={() =>
               router.push({
-                pathname: '/Plans/PlanBuilderScreen/[id]',
+                pathname: '/plans/PlanBuilderScreen/[id]',
                 params: { id: item.id.toString() }
               })
             }
@@ -90,7 +90,7 @@ const MyPlansScreen = () => {
             style={styles.editBtn}
             onPress={() =>
               router.push({
-                pathname: '/Plans/edit/[id]',
+                pathname: '/plans/edit/[id]',
                 params: { id: item.id.toString() }
               })
             }
@@ -153,7 +153,7 @@ const MyPlansScreen = () => {
           <Text style={styles.screenTitle}>MY PLANS</Text>
           <TouchableOpacity 
             style={styles.addBtn}
-            onPress={() => router.push('/Plans/create')}
+            onPress={() => router.push('/plans/create')}
           >
             <MaterialIcons name="add" size={24} color="#000" />
             <Text style={styles.addBtnText}>ADD NEW PLAN</Text>

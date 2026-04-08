@@ -1,4 +1,4 @@
-import apiBase from './apiBase';
+import apiBase from '../api/api';
 
 export interface Plan {
   id: string;

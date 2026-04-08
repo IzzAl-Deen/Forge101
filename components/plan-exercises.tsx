@@ -42,28 +42,29 @@ export default function PlanExercises({
                         {ex.name ?? `Exercise ${index + 1}`}
                     </Text>
 
-                    <TextInput
-                        style={styles.input}
-                        keyboardType="numeric"
-                        value={ex.sets}
-                        placeholder="Sets"
-                        placeholderTextColor="#777"
-                        onChangeText={(t) =>
-                            onChange(index, "sets", t)
-                        }
-                    />
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                        <TextInput
+                            style={styles.input}
+                            keyboardType="numeric"
+                            value={ex.sets}
+                            placeholder="Sets"
+                            placeholderTextColor="#777"
+                            onChangeText={(t) =>
+                                onChange(index, "sets", t)
+                            }
+                        />
 
-                    <TextInput
-                        style={styles.input}
-                        keyboardType="numeric"
-                        value={ex.reps}
-                        placeholder="Reps"
-                        placeholderTextColor="#777"
-                        onChangeText={(t) =>
-                            onChange(index, "reps", t)
-                        }
-                    />
-
+                        <TextInput
+                            style={styles.input}
+                            keyboardType="numeric"
+                            value={ex.reps}
+                            placeholder="Reps"
+                            placeholderTextColor="#777"
+                            onChangeText={(t) =>
+                                onChange(index, "reps", t)
+                            }
+                        />
+                  
                     <Text style={styles.dayText}>
                         Days: {ex.day.length > 0 ? ex.day.join(", ") : "None"}
                     </Text>
@@ -71,6 +72,7 @@ export default function PlanExercises({
                     <TouchableOpacity onPress={() => onRemove(index)}>
                         <Text style={styles.remove}>Remove</Text>
                     </TouchableOpacity>
+                      </View>
                 </View>
             ))}
 
@@ -105,6 +107,8 @@ const styles = StyleSheet.create({
         backgroundColor: "#121212",
         color: "#fff",
         padding: 10,
+        width: 50,
+        alignItems: "center",
         borderRadius: 10,
         marginTop: 6,
     },
