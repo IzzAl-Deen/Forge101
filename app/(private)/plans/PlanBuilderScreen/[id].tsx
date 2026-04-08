@@ -134,7 +134,7 @@ const randomImages = [
           </View>
           <TouchableOpacity style={styles.addBtn} onPress={() => 
          router.push({
-        pathname: '/(private)/Plans/edit/[id]',
+        pathname: '/(private)/plans/edit/[id]',
         params: { id: id }
              })
 }>
