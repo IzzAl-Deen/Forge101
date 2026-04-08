@@ -8,35 +8,37 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
 import { planService, Plan } from '@/Api2/planService';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Link, useRouter } from 'expo-router';
+
 
 const MyPlansScreen = () => {
-
+  const router = useRouter();
   const { data: plans, isLoading, error } = useQuery({
     queryKey: ['plans'],
     queryFn: planService.getPlans,
   });
 
   const randomImages = [
-'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000',
-  'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1000',
-  'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000',
-  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1000',
-  'https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?q=80&w=1000',
-  'https://images.unsplash.com/photo-1599058917212-7f5c2f3c4c4f?q=80&w=1000',
-  'https://images.unsplash.com/photo-1558618047-3c8c76ca5d8a?q=80&w=1000',
-  'https://images.unsplash.com/photo-1541534741688-6079c4a5d8e0?q=80&w=1000',
-  'https://images.unsplash.com/photo-1526506118085-60b3c2d2c6c7?q=80&w=1000',
-  'https://images.unsplash.com/photo-1580261453794-4c0e7f8c5f5f?q=80&w=1000',
-  'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=1000',
-  'https://images.unsplash.com/photo-1605296867304-46e3b4d9e8c3?q=80&w=1000',
-  'https://images.unsplash.com/photo-1594737625785-6c2c2e5c4b0d?q=80&w=1000',
-  'https://images.unsplash.com/photo-1571019614243-6c9f6c3e3e3e?q=80&w=1000',
-  'https://images.unsplash.com/photo-1605296867304-46e3b4d9e8c3?q=80&w=1000',
+    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000',
+    'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1000',
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000',
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1000',
+    'https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?q=80&w=1000',
+    'https://images.unsplash.com/photo-1599058917212-7f5c2f3c4c4f?q=80&w=1000',
+    'https://images.unsplash.com/photo-1558618047-3c8c76ca5d8a?q=80&w=1000',
+    'https://images.unsplash.com/photo-1541534741688-6079c4a5d8e0?q=80&w=1000',
+    'https://images.unsplash.com/photo-1526506118085-60b3c2d2c6c7?q=80&w=1000',
+    'https://images.unsplash.com/photo-1580261453794-4c0e7f8c5f5f?q=80&w=1000',
+    'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=1000',
+    'https://images.unsplash.com/photo-1605296867304-46e3b4d9e8c3?q=80&w=1000',
+    'https://images.unsplash.com/photo-1594737625785-6c2c2e5c4b0d?q=80&w=1000',
+    'https://images.unsplash.com/photo-1571019614243-6c9f6c3e3e3e?q=80&w=1000',
+    'https://images.unsplash.com/photo-1605296867304-46e3b4d9e8c3?q=80&w=1000',
   ];
 
   const renderPlanCard = ({ item, index }: { item: Plan; index: number }) => (
@@ -72,16 +74,26 @@ const MyPlansScreen = () => {
         </View>
 
         <View style={styles.buttonsRow}>
-          <TouchableOpacity style={styles.viewBtn}>
+          <TouchableOpacity
+            style={styles.viewBtn}
+            onPress={() =>
+              router.push({
+                pathname: '/Plans/PlanBuilderScreen/[id]',
+                params: { id: item.id.toString() }
+              })
+            }
+          >
             <Text style={styles.viewBtnText}>VIEW EXERCISES</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editBtn}
-            onPress={() => {
-            
-              // navigation.navigate('EditPlan', { planId: item.id });
-            }}
+            onPress={() =>
+              router.push({
+                pathname: '/Plans/edit/[id]',
+                params: { id: item.id.toString() }
+              })
+            }
           >
             <MaterialIcons name="edit" size={24} color="#f4ffc9" />
           </TouchableOpacity>
@@ -123,15 +135,15 @@ const MyPlansScreen = () => {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
-            // navigation.goBack();
+            router.back();
           }}
           style={styles.backBtn}
         >
-          <MaterialIcons 
-      name="arrow-back-ios" 
-      size={28} 
-      color="#f4ffc9" 
-    />
+          <MaterialIcons
+            name="arrow-back-ios"
+            size={28}
+            color="#f4ffc9"
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Forge</Text>
       </View>
@@ -139,10 +151,14 @@ const MyPlansScreen = () => {
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={styles.screenTitle}>MY PLANS</Text>
-          <TouchableOpacity style={styles.addBtn}>
-           <MaterialIcons name="add" size={24} color="#000" />
-  <Text style={styles.addBtnText}>ADD NEW PLAN</Text>
+          <TouchableOpacity 
+            style={styles.addBtn}
+            onPress={() => router.push('/Plans/create')}
+          >
+            <MaterialIcons name="add" size={24} color="#000" />
+            <Text style={styles.addBtnText}>ADD NEW PLAN</Text>
           </TouchableOpacity>
+
         </View>
 
         <FlatList
@@ -173,11 +189,11 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40,
-  height: 40,
-  borderRadius: 12,
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: 'rgba(255,255,255,0.05)',
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   backIcon: {
     color: '#f4ffc9',
@@ -206,27 +222,27 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '900',
   },
- addBtn: {
-  backgroundColor: '#cefc22',
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  borderRadius: 14,
-  shadowColor: '#cefc22',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  elevation: 6,
-},
+  addBtn: {
+    backgroundColor: '#cefc22',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    shadowColor: '#cefc22',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 
-addBtnText: {
-  color: '#000',
-  fontWeight: 'bold',
-  fontSize: 13,
-  letterSpacing: 0.5,
-},
+  addBtnText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 13,
+    letterSpacing: 0.5,
+  },
   card: {
     backgroundColor: '#131313',
     borderRadius: 20,
