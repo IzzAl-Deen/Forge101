@@ -27,6 +27,19 @@ export default function EditPlanScreen() {
         difficulty: data.difficulty,
         duration_minutes: data.duration_minutes,
       });
+
+
+      const exercisesData = await Plans.getExercises(Number(id));
+
+      setExercises(
+        exercisesData.exercises.map((ex: any) => ({
+          exercise_id: ex.id,
+          name: ex.name,
+          sets: String(ex.pivot?.sets || ""),
+          reps: String(ex.pivot?.reps || ""),
+          day: ex.pivot?.day ? [ex.pivot.day] : [],
+        }))
+      );
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Failed loading plan");
