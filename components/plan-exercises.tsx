@@ -1,15 +1,22 @@
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 
+export type PendingExercise = {
+    exercise_id: number;
+    name: string;
+    sets: string;
+    reps: string;
+    day: string[];
+};
 
 type Props = {
-    exercises?: any[];
+    exercises?: PendingExercise[];
     onAdd: () => void;
     onRemove: (index: number) => void;
     onChange: (
         index: number,
         field: "sets" | "reps",
-        value: number
+        value: string
     ) => void;
 };
 
@@ -38,24 +45,28 @@ export default function PlanExercises({
                     <TextInput
                         style={styles.input}
                         keyboardType="numeric"
-                        value={String(ex.sets)}
+                        value={ex.sets}
                         placeholder="Sets"
                         placeholderTextColor="#777"
                         onChangeText={(t) =>
-                            onChange(index, "sets", Number(t))
+                            onChange(index, "sets", t)
                         }
                     />
 
                     <TextInput
                         style={styles.input}
                         keyboardType="numeric"
-                        value={String(ex.reps)}
+                        value={ex.reps}
                         placeholder="Reps"
                         placeholderTextColor="#777"
                         onChangeText={(t) =>
-                            onChange(index, "reps", Number(t))
+                            onChange(index, "reps", t)
                         }
                     />
+
+                    <Text style={styles.dayText}>
+                        Days: {ex.day.length > 0 ? ex.day.join(", ") : "None"}
+                    </Text>
 
                     <TouchableOpacity onPress={() => onRemove(index)}>
                         <Text style={styles.remove}>Remove</Text>
@@ -102,6 +113,11 @@ const styles = StyleSheet.create({
         color: "#ff6767",
         marginTop: 10,
         fontWeight: "bold",
+    },
+
+    dayText: {
+        color: "#bbb",
+        marginTop: 10,
     },
 
     addBtn: {

@@ -1,27 +1,24 @@
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { Alert, ActivityIndicator, ScrollView } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import Plans from "@/api/plansApi";
 import PlanForm from "@/components/planform";
+import { PendingExercise } from "@/components/plan-exercises";
 import { Plan } from "@/types/plan";
-import { StyleSheet, Text } from "react-native";
 import SuccessModal from "@/components/success-plan-modal";
 
 
 
 export default function EditPlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [exercises, setExercises] = useState<PendingExercise[]>([]);
 
   const { id } = useLocalSearchParams();
 
   const [plan, setPlan] =
     useState<Omit<Plan, "user_id"> | null>(null);
 
-  useEffect(() => {
-    loadPlan();
-  }, []);
-
-  const loadPlan = async () => {
+  const loadPlan = useCallback(async () => {
     try {
       const data = await Plans.getById(Number(id));
 
@@ -34,13 +31,35 @@ export default function EditPlanScreen() {
       console.error(err);
       Alert.alert("Error", "Failed loading plan");
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadPlan();
+  }, [loadPlan]);
 
   const handleUpdate = async (
     updated: Omit<Plan, "user_id">
   ) => {
     try {
       await Plans.update(Number(id), updated as Plan);
+
+      let orderIndex = 1;
+
+      for (const exercise of exercises) {
+        const days = exercise.day.length > 0 ? exercise.day : ["monday"];
+
+        for (const day of days) {
+          await Plans.attachExercise(Number(id), {
+            exercise_id: exercise.exercise_id,
+            sets: Number(exercise.sets) || 0,
+            reps: Number(exercise.reps) || 0,
+            day,
+            order_index: orderIndex,
+          });
+
+          orderIndex += 1;
+        }
+      }
 
       setModalVisible(true);
     } catch (err) {
@@ -64,7 +83,15 @@ export default function EditPlanScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
 
-    <PlanForm initialValues={plan} submitLabel="UPDATE PLAN" onSubmit={handleUpdate} onDelete={handleDelete}/>
+    <PlanForm
+      initialValues={plan}
+      planId={Number(id)}
+      exercises={exercises}
+      submitLabel="UPDATE PLAN"
+      onSubmit={handleUpdate}
+      onExercisesChange={setExercises}
+      onDelete={handleDelete}
+    />
     <SuccessModal
         visible={modalVisible}
         message="Success!"
