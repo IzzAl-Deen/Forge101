@@ -18,7 +18,22 @@ export interface PlanExercise {
   image_url?: string;
 }
 
+export interface UserPlan {
+  id: number;
+  plan_id: number;
+  user_id: number;
+  progress_percent: number;
+  is_completed: boolean;
+  plan: Plan;
+}
+
 export const myPlansService = {
+
+  getUserSubscriptions: async (): Promise<UserPlan[]> => {
+    const response = await apiBase.get('/user-plans');
+    return response.data;
+  },
+
   getPlans: async (): Promise<Plan[]> => {
     const response = await apiBase.get('/plans');
     return response.data;
@@ -51,5 +66,8 @@ getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
   updateAttachedExercise: async (planId: string, exerciseId: number, data: any) => {
     const response = await apiBase.put(`/plans/${planId}/exercises/${exerciseId}`, data);
     return response.data;
-  }
+  },
+
+
+
 };
