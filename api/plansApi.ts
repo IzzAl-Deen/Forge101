@@ -41,6 +41,11 @@ const Plans = {
         return response.data;
     },
 
+    deleteExercise: async (planId: number, exerciseId: number) => {
+        const response = await api.delete(`/plans/${planId}/exercises/${exerciseId}`);
+        return response.data;
+    },
+
     delete: async (id: number) => {
         await api.delete(`/plans/${id}/`);
         return true;
