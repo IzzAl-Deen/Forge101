@@ -7,6 +7,9 @@ import { ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Text, TextIn
 import PlanExercises, { PendingExercise } from "./plan-exercises";
 import Exercise from "../api/exerciseApi";
 import Header from "./ui/header";
+import Plans from "@/api/plansApi";
+import ImageSection from "./planform-components/image-section";
+import PlaninputForm, { PlaninputFormDifficulty } from "./planform-components/plan-input";
 
 type Props = {
   initialValues?: Omit<Plan, "user_id">;
@@ -18,37 +21,20 @@ type Props = {
   onDelete?: () => void;
 };
 
-const difficulties = ["Easy", "Medium", "Hard", "Extreme"];
-
-export default function PlanForm({
-  initialValues,
-  planId,
-  exercises,
-  submitLabel,
-  onSubmit,
-  onExercisesChange,
-  onDelete,
-}: Props) {
+export default function PlanForm({initialValues, planId, exercises, submitLabel, onSubmit, onExercisesChange, onDelete,}: Props) {
   const router = useRouter();
-  const {
-    selectedExercises,
-    planName,
-    planDifficulty,
-    planDuration,
-  } = useLocalSearchParams<{
+  const { selectedExercises,  planName, planDifficulty, planDuration} = useLocalSearchParams<{
     selectedExercises?: string;
     planName?: string;
     planDifficulty?: string;
     planDuration?: string;
   }>();
+
   const [form, setForm] = useState<Omit<Plan, "user_id">>({
     name: "",
     difficulty: "Easy",
     duration_minutes: 0,
-
   });
-
-  const [dropdownVisible, setDropdownVisible] = useState(false);
 
   useEffect(() => {
     if (initialValues) setForm(initialValues);
@@ -106,13 +92,6 @@ export default function PlanForm({
       return;
     }
 
-    Exercise.delete(exercises[index].exercise_id).then(() => {
-      console.log("Exercise deleted successfully");
-    }).catch((err) => {
-      console.error("Failed to delete exercise:", err);
-    });
-
-
     onExercisesChange(exercises.filter((_, itemIndex) => itemIndex !== index));
   };
 
@@ -132,108 +111,33 @@ export default function PlanForm({
     );
   };
 
-
-
   return (
     <View style={styles.screen}>
       <Header title={initialValues ? "Edit Plan" : "Create Plan"} />
 
-
-
       <View>
-
-        <ImageBackground
-          source={require("@/assets/images/create-plan-background.png")}
-          style={styles.header}
-          imageStyle={styles.headerImageRadius}
-        >
-
-          <LinearGradient
-
-            colors={['transparent', 'rgba(0,0,0,0.4)', '#121212']} 
-            style={[styles.shadow, styles.headerImageRadius]}
-            locations={[0, 0.5, 1]} 
-          />
-
-          <View style={styles.headerOverlay}>
-            <Text style={styles.smallTitle}>NEW ROUTINE</Text>
-            <Text style={styles.bigTitle}>
-              UNLEASH{"\n"}POTENTIAL
-            </Text>
-          </View>
-        </ImageBackground>
-
+        <ImageSection />
 
         <View style={styles.form}>
+          <PlaninputForm
+            lable="PLAN NAME"
+            inputtype="name"
+            value={form.name}
+            placeholder="Full Body Workout"
+            onChange={(val) => handleChange("name", val)} />
 
-          <Text style={styles.label}>PLAN NAME</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Full Body Workout"
-              placeholderTextColor="#777"
-              value={form.name}
-              onChangeText={(t) => handleChange("name", t)}
-            />
+          <PlaninputFormDifficulty
+            lable="DIFFICULTY"
+            inputtype="difficulty"
+            value={form.difficulty}
+            onChange={(val) => handleChange("difficulty", val)} />
 
-            <View style={styles.inputBottomGlow} />
-          </View>
-
-
-          <Text style={styles.label}>DIFFICULTY</Text>
-          <View style={styles.inputWrapper}>
-            <TouchableOpacity
-              style={styles.inputRow}
-              onPress={() => setDropdownVisible(true)}
-            >
-              <Text style={styles.inputText}>{form.difficulty}</Text>
-              <Ionicons name="chevron-down" size={18} color="#aaa" />
-            </TouchableOpacity>
-
-            <Modal transparent visible={dropdownVisible} animationType="fade">
-              <Pressable
-                style={styles.modalOverlay}
-                onPress={() => setDropdownVisible(false)}
-              >
-                <View style={styles.dropdown}>
-                  {difficulties.map((level) => (
-                    <TouchableOpacity
-                      key={level}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        handleChange("difficulty", level);
-                        setDropdownVisible(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>{level}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
-            <View style={styles.inputBottomGlow} />
-          </View>
-
-
-          <Text style={styles.label}>DURATION (MINUTES)</Text>
-
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={{ flex: 1, color: "#fff" }}
-                placeholder="e.g., 60"
-                placeholderTextColor="#777"
-                keyboardType="numeric"
-                value={String(form.duration_minutes)}
-                onChangeText={(t) =>
-                  handleChange("duration_minutes", Number(t))
-                }
-              />
-              <Text style={styles.minText}>MIN</Text>
-            </View>
-            <View style={styles.inputBottomGlow} />
-          </View>
-
+          <PlaninputForm
+            lable="DURATION (MINUTES)"
+            inputtype="duration_minutes"
+            value={form.duration_minutes}
+            onChange={(val) => handleChange("duration_minutes", val)}
+            leftsidetext="MIN" placeholder="60" />
 
           <PlanExercises
             exercises={exercises}
@@ -252,7 +156,6 @@ export default function PlanForm({
               <Text style={styles.saveText}>{submitLabel}</Text>
             </LinearGradient>
           </TouchableOpacity>
-
 
           {onDelete && (
             <TouchableOpacity
@@ -274,85 +177,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#121212",
   },
 
-  header: {
-    height: 220,
-    width: "100%",
-    justifyContent: "flex-end",
-  },
-
-  headerImageRadius: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-
-  shadow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '80%',
-  },
-
-  headerOverlay: {
-    padding: 18,
-  },
-
-
-
-  smallTitle: {
-    color: "#ccff00",
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 1.5,
-  },
-
-  bigTitle: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "bold",
-    lineHeight: 30,
-    marginTop: 4,
-  },
-
 
   form: {
     paddingTop: 18,
   },
-
-  label: {
-    color: "#aaa",
-    fontSize: 12,
-    marginTop: 18,
-    marginBottom: 6,
-    marginLeft: 4,
-    letterSpacing: 1,
-  },
-
-  input: {
-    backgroundColor: "#1A1A1A",
-    padding: 16,
-    borderRadius: 14,
-    color: "#fff",
-  },
-
-  inputRow: {
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  inputText: {
-    color: "#fff",
-  },
-
-  minText: {
-    color: "#888",
-    fontSize: 12,
-  },
-
 
   saveButton: {
     marginTop: 32,
@@ -381,38 +209,5 @@ const styles = StyleSheet.create({
     color: "#ff6767",
     fontWeight: "bold",
 
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    padding: 40,
-  },
-
-  dropdown: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 14,
-  },
-
-  dropdownItem: {
-    padding: 16,
-  },
-
-  dropdownText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-
-  inputWrapper: {
-    backgroundColor: "#1A1A1A",
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    overflow: "hidden",
-  },
-
-  inputBottomGlow: {
-    height: 2,
-    backgroundColor: "rgb(255, 255, 255)",
   },
 });
