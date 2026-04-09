@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import axios from "axios";
 
-const api = axios.create({
+const apiBase = axios.create({
   baseURL: "http://127.0.0.1:8000/api/v1",
   headers: {
     'Accept': 'application/json',
@@ -9,7 +9,7 @@ const api = axios.create({
   },
 });
 
-api.interceptors.request.use(async (config) => {
+apiBase.interceptors.request.use(async (config) => {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -21,4 +21,4 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-export default api;
+export default apiBase;
