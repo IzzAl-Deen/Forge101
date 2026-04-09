@@ -6,14 +6,14 @@ import PlanForm from "@/components/planform";
 import { PendingExercise } from "@/components/plan-exercises";
 import { Plan } from "@/types/plan";
 import SuccessModal from "@/components/success-plan-modal";
-
+import useSelectedExercises from "@/hooks/use-selected-exercises";
 
 
 export default function EditPlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
 
-  const { id } = useLocalSearchParams();
+  const { id, selectedExercises } = useLocalSearchParams();
 
   const [plan, setPlan] =
     useState<Omit<Plan, "user_id"> | null>(null);
@@ -28,26 +28,27 @@ export default function EditPlanScreen() {
         duration_minutes: data.duration_minutes,
       });
 
+      if (!selectedExercises) {
+        const exercisesData = await Plans.getExercises(Number(id));
 
-      const exercisesData = await Plans.getExercises(Number(id));
-
-      setExercises(
-        exercisesData.exercises.map((ex: any) => ({
-          exercise_id: ex.id,
-          name: ex.name,
-          sets: String(ex.pivot?.sets || ""),
-          reps: String(ex.pivot?.reps || ""),
-          day: ex.pivot?.day ? [ex.pivot.day] : [],
-        }))
-      );
+        setExercises(
+          exercisesData.exercises.map((ex: any) => ({
+            exercise_id: ex.id,
+            name: ex.name,
+            sets: String(ex.pivot?.sets || ""),
+            reps: String(ex.pivot?.reps || ""),
+            day: ex.pivot?.day ? [ex.pivot.day] : [],
+          }))
+        );
+      }
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Failed loading plan");
     }
-  }, [id]);
+  }, [id, selectedExercises]);
 
   useEffect(() => {
-    loadPlan();
+      loadPlan();
   }, [loadPlan]);
 
   const handleUpdate = async (
@@ -57,23 +58,28 @@ export default function EditPlanScreen() {
       await Plans.update(Number(id), updated as Plan);
 
       let orderIndex = 1;
+      const existing = await Plans.getExercises(Number(id));
+      await Promise.all(
+        existing.exercises.map((ex: any) =>
+          Plans.deleteExercise(Number(id), ex.id)
+        )
+      );
 
-      for (const exercise of exercises) {
+      const requests = exercises.flatMap((exercise) => {
         const days = exercise.day.length > 0 ? exercise.day : ["monday"];
 
-        for (const day of days) {
-          await Plans.attachExercise(Number(id), {
+        return days.map((day) =>
+          Plans.attachExercise(Number(id), {
             exercise_id: exercise.exercise_id,
             sets: Number(exercise.sets) || 0,
             reps: Number(exercise.reps) || 0,
             day,
-            order_index: orderIndex,
-          });
+            order_index: orderIndex++,
+          })
+        );
+      });
 
-          orderIndex += 1;
-        }
-      }
-
+      await Promise.all(requests);
       setModalVisible(true);
     } catch (err) {
       console.error(err);
@@ -91,21 +97,23 @@ export default function EditPlanScreen() {
     }
   };
 
+  useSelectedExercises(setExercises);
+
   if (!plan) return <ActivityIndicator />;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
 
-    <PlanForm
-      initialValues={plan}
-      planId={Number(id)}
-      exercises={exercises}
-      submitLabel="UPDATE PLAN"
-      onSubmit={handleUpdate}
-      onExercisesChange={setExercises}
-      onDelete={handleDelete}
-    />
-    <SuccessModal
+      <PlanForm
+        initialValues={plan}
+        planId={Number(id)}
+        exercises={exercises}
+        submitLabel="UPDATE PLAN"
+        onSubmit={handleUpdate}
+        onExercisesChange={setExercises}
+        onDelete={handleDelete}
+      />
+      <SuccessModal
         visible={modalVisible}
         message="Success!"
         onClose={() => setModalVisible(false)}
