@@ -1,4 +1,4 @@
-import apiBase from '../api/api';
+import apiBase from './ApiBase';
 
 export interface Plan {
   id: string;
@@ -18,7 +18,7 @@ export interface PlanExercise {
   image_url?: string;
 }
 
-export const planService = {
+export const myPlansService = {
   getPlans: async (): Promise<Plan[]> => {
     const response = await apiBase.get('/plans');
     return response.data;

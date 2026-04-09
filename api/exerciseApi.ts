@@ -1,4 +1,4 @@
-import api from "./api";
+import apiBase from "./ApiBase";
 
 export type Exercise = {
   id?: number;
@@ -45,7 +45,7 @@ const Exercises = {
     page = 1,
     perPage = 15,
   ): Promise<LaravelPaginatedResponse<Exercise>> => {
-    const response = await api.get("/exercises", {
+    const response = await apiBase.get("/exercises", {
       params: {
         page,
         per_page: perPage,
@@ -55,14 +55,14 @@ const Exercises = {
   },
 
   getById: async (id: number): Promise<Exercise> => {
-    const response = await api.get(`/exercises/${id}`);
+    const response = await apiBase.get(`/exercises/${id}`);
     return response.data;
   },
 
   search: async (
     params: ExerciseSearchParams = {},
   ): Promise<LaravelPaginatedResponse<Exercise>> => {
-    const response = await api.get("/exercises/search", {
+    const response = await apiBase.get("/exercises/search", {
       params: {
         q: params.q,
         category: params.category,
@@ -76,17 +76,17 @@ const Exercises = {
   },
 
   create: async (exercise: Exercise) => {
-    const response = await api.post("/exercises", exercise);
+    const response = await apiBase.post("/exercises", exercise);
     return response.data;
   },
 
   update: async (id: number, exercise: Partial<Exercise>) => {
-    const response = await api.put(`/exercises/${id}`, exercise);
+    const response = await apiBase.put(`/exercises/${id}`, exercise);
     return response.data;
   },
 
   delete: async (id: number): Promise<boolean> => {
-    await api.delete(`/exercises/${id}`);
+    await apiBase.delete(`/exercises/${id}`);
     return true;
   },
 };

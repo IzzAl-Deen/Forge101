@@ -1,4 +1,4 @@
-import api from "./api";
+import apiBase from "./ApiBase";
 import { Plan } from "../types/plan";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
@@ -12,42 +12,42 @@ type AttachExerciseData = {
 
 const Plans = {
     getAll: async () => {
-        const response = await api.get("/plans/");
+        const response = await apiBase.get("/plans/");
         return response.data;
     },
 
     getById : async (id : number) => {
-        const response = await api.get(`/plans/${id}/`);
+        const response = await apiBase.get(`/plans/${id}/`);
         return response.data;
     },
 
     create: async (plan: Plan) => {
-        const response = await api.post("/plans/", plan);
+        const response = await apiBase.post("/plans/", plan);
         return response.data;
     },
 
     update: async (id: number, plan: Plan) => {
-        const response = await api.put(`/plans/${id}/`, plan);
+        const response = await apiBase.put(`/plans/${id}/`, plan);
         return response.data;
     },
 
     attachExercise: async (planId: number, exercise: AttachExerciseData) => {
-        const response = await api.post(`/plans/${planId}/exercises`, exercise);
+        const response = await apiBase.post(`/plans/${planId}/exercises`, exercise);
         return response.data;
     },
 
     getExercises: async (planId: number) => {
-        const response = await api.get(`/plans/${planId}/exercises`);
+        const response = await apiBase.get(`/plans/${planId}/exercises`);
         return response.data;
     },
 
     deleteExercise: async (planId: number, exerciseId: number) => {
-        const response = await api.delete(`/plans/${planId}/exercises/${exerciseId}`);
+        const response = await apiBase.delete(`/plans/${planId}/exercises/${exerciseId}`);
         return response.data;
     },
 
     delete: async (id: number) => {
-        await api.delete(`/plans/${id}/`);
+        await apiBase.delete(`/plans/${id}/`);
         return true;
     }
 
