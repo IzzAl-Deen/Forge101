@@ -1,24 +1,26 @@
-import { useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
 import { PendingExercise } from "@/components/plan-exercises";
-
-type Params = {
-  selectedExercises?: string;
-};
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect } from "react";
 
 export default function useSelectedExercises(
-  setExercises: (exercises: PendingExercise[]) => void
+  setExercises: (exercises: PendingExercise[]) => void,
 ) {
-  const { selectedExercises } = useLocalSearchParams<Params>();
-
   useEffect(() => {
-    if (!selectedExercises) return;
-
-    try {
-      const parsed = JSON.parse(selectedExercises);
-      setExercises(parsed);
-    } catch (error) {
-      console.error("Failed to parse selected exercises:", error);
+    async function loadSelectedExercises() {
+      try {
+        const selectedExercises =
+          await AsyncStorage.getItem("selectedExercises");
+        if (selectedExercises) {
+          const parsed = JSON.parse(selectedExercises);
+          setExercises(parsed);
+          // Clear after loading
+          await AsyncStorage.removeItem("selectedExercises");
+        }
+      } catch (error) {
+        console.error("Failed to load selected exercises:", error);
+      }
     }
-  }, [selectedExercises]);
+
+    loadSelectedExercises();
+  }, [setExercises]);
 }

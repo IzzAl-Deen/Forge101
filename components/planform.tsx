@@ -1,15 +1,17 @@
-import { Plan } from "@/types/plan";
-import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import PlanExercises, { PendingExercise } from "./plan-exercises";
-import Header from "./ui/header";
-import ImageSection from "./planform-components/image-section";
-import PlaninputForm, { PlaninputFormDifficulty } from "./planform-components/plan-input";
 import { useAddExercise } from "@/hooks/use-add-exercise";
 import { useRemoveExercise } from "@/hooks/use-remove-exercise";
 import { useUpdateExercise } from "@/hooks/use-update-exercise";
+import { Plan } from "@/types/plan";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import PlanExercises, { PendingExercise } from "./plan-exercises";
+import ImageSection from "./planform-components/image-section";
+import PlaninputForm, {
+  PlaninputFormDifficulty,
+} from "./planform-components/plan-input";
+import Header from "./ui/header";
 
 type Props = {
   initialValues?: Omit<Plan, "user_id">;
@@ -21,28 +23,52 @@ type Props = {
   onDelete?: () => void;
 };
 
-export default function PlanForm({initialValues, planId, exercises, submitLabel, onSubmit, onExercisesChange, onDelete,}: Props) {
-
+export default function PlanForm({
+  initialValues,
+  planId,
+  exercises,
+  submitLabel,
+  onSubmit,
+  onExercisesChange,
+  onDelete,
+}: Props) {
   const [form, setForm] = useState<Omit<Plan, "user_id">>({
     name: "",
     difficulty: "Easy",
     duration_minutes: 0,
   });
 
+  const FORM_KEY = "PlanForm.data";
+
   useEffect(() => {
-    if (initialValues) setForm(initialValues);
+    AsyncStorage.getItem(FORM_KEY)
+      .then((saved) => {
+        if (saved) {
+          setForm(JSON.parse(saved));
+        } else if (initialValues) {
+          setForm(initialValues);
+        }
+      })
+      .catch(console.error);
   }, [initialValues]);
 
-  const handleChange = (
-    field: keyof typeof form,
-    value: string | number
-  ) => {
+  useEffect(() => {
+    AsyncStorage.setItem(FORM_KEY, JSON.stringify(form)).catch(console.error);
+  }, [form]);
+
+  const handleChange = (field: keyof typeof form, value: string | number) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const { addExercise } = useAddExercise({ planId, form });
-  const { removeExercise } = useRemoveExercise({ exercises, onExercisesChange }); 
-  const { updateExercise } = useUpdateExercise({ exercises, onExercisesChange });
+  const { removeExercise } = useRemoveExercise({
+    exercises,
+    onExercisesChange,
+  });
+  const { updateExercise } = useUpdateExercise({
+    exercises,
+    onExercisesChange,
+  });
 
   return (
     <View style={styles.screen}>
@@ -57,20 +83,24 @@ export default function PlanForm({initialValues, planId, exercises, submitLabel,
             inputtype="name"
             value={form.name}
             placeholder="Full Body Workout"
-            onChange={(val) => handleChange("name", val)} />
+            onChange={(val) => handleChange("name", val)}
+          />
 
           <PlaninputFormDifficulty
             lable="DIFFICULTY"
             inputtype="difficulty"
             value={form.difficulty}
-            onChange={(val) => handleChange("difficulty", val)} />
+            onChange={(val) => handleChange("difficulty", val)}
+          />
 
           <PlaninputForm
             lable="DURATION (MINUTES)"
             inputtype="duration_minutes"
             value={form.duration_minutes}
             onChange={(val) => handleChange("duration_minutes", val)}
-            leftsidetext="MIN" placeholder="60" />
+            leftsidetext="MIN"
+            placeholder="60"
+          />
 
           <PlanExercises
             exercises={exercises}
@@ -91,10 +121,7 @@ export default function PlanForm({initialValues, planId, exercises, submitLabel,
           </TouchableOpacity>
 
           {onDelete && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={onDelete}
-            >
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
               <Text style={styles.deleteText}>DELETE PLAN</Text>
             </TouchableOpacity>
           )}
@@ -109,7 +136,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#121212",
   },
-
 
   form: {
     paddingTop: 18,
@@ -141,6 +167,5 @@ const styles = StyleSheet.create({
   deleteText: {
     color: "#ff6767",
     fontWeight: "bold",
-
   },
 });

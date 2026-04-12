@@ -4,8 +4,9 @@ import Exercises, {
 } from "@/api/exerciseApi";
 import { Kinetic } from "@/constants/theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,11 +14,11 @@ import {
   FlatList,
   Image,
   Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,26 +26,62 @@ const muscleFilters = ["all", "chest", "back", "legs", "arms"];
 
 export default function ExercisesScreen() {
   const router = useRouter();
-  const {
-    planId,
-    returnId,
-    returnTo,
-    planName,
-    planDifficulty,
-    planDuration,
-  } = useLocalSearchParams<{
-    planId?: string;
-    returnId?: string;
-    returnTo?: string;
-    planName?: string;
-    planDifficulty?: string;
-    planDuration?: string;
-  }>();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState("all");
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
+  const [navData, setNavData] = useState<{
+    planId: string;
+    returnId: string;
+    returnTo: string;
+    planName: string;
+    planDifficulty: string;
+    planDuration: string;
+  } | null>(null);
+
+  const SEARCH_KEY = "ExercisesScreen.searchText";
+  const MUSCLE_KEY = "ExercisesScreen.selectedMuscle";
+  const NAV_KEY = "ExercisesScreen.navData";
+
+  useEffect(() => {
+    // Load nav data and preferences
+    async function loadState() {
+      try {
+        const [savedSearch, savedMuscle, savedNav] = await Promise.all([
+          AsyncStorage.getItem(SEARCH_KEY),
+          AsyncStorage.getItem(MUSCLE_KEY),
+          AsyncStorage.getItem(NAV_KEY),
+        ]);
+
+        if (savedSearch !== null) {
+          setSearchText(savedSearch);
+        }
+        if (savedMuscle !== null) {
+          setSelectedMuscle(savedMuscle);
+        }
+        if (savedNav !== null) {
+          setNavData(JSON.parse(savedNav));
+        }
+      } catch (error) {
+        console.error("Failed to load state:", error);
+      }
+    }
+
+    loadState();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem(SEARCH_KEY, searchText).catch((error) =>
+      console.error("Failed to save searchText:", error),
+    );
+  }, [searchText]);
+
+  useEffect(() => {
+    AsyncStorage.setItem(MUSCLE_KEY, selectedMuscle).catch((error) =>
+      console.error("Failed to save selectedMuscle:", error),
+    );
+  }, [selectedMuscle]);
 
   useEffect(() => {
     async function fetchExercises() {
@@ -80,7 +117,9 @@ export default function ExercisesScreen() {
       const matchesSearch =
         normalizedSearch.length === 0 ||
         exercise.name.toLowerCase().includes(normalizedSearch) ||
-        (exercise.target_muscle || "").toLowerCase().includes(normalizedSearch) ||
+        (exercise.target_muscle || "")
+          .toLowerCase()
+          .includes(normalizedSearch) ||
         (exercise.category || "").toLowerCase().includes(normalizedSearch);
 
       return matchesMuscle && matchesSearch;
@@ -96,7 +135,7 @@ export default function ExercisesScreen() {
   }
 
   async function handleAddSelectedExercises() {
-    if (!returnTo) {
+    if (!navData?.returnTo) {
       Alert.alert("Error", "Missing return page");
       return;
     }
@@ -108,12 +147,6 @@ export default function ExercisesScreen() {
     router.push({
       pathname: "/(private)/exercises/ExerciseDetailsScreen",
       params: {
-        planId,
-        returnId,
-        returnTo,
-        planName,
-        planDifficulty,
-        planDuration,
         selectedIds: selectedExercises.join(","),
       },
     });
@@ -248,9 +281,7 @@ export default function ExercisesScreen() {
               </View>
             )
           }
-          ListFooterComponent={
-            <View style={styles.footerSpacer} />
-          }
+          ListFooterComponent={<View style={styles.footerSpacer} />}
         />
 
         <Pressable
