@@ -1,23 +1,25 @@
-import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet } from "react-native";
-import PlanForm from "@/components/planform";
 import Plans from "@/api/plansApi";
+import { PendingExercise } from "@/components/plan-exercises";
+import PlanForm from "@/components/planform";
+import SuccessModal from "@/components/success-plan-modal";
+import useSelectedExercises from "@/hooks/use-selected-exercises";
 import { supabase } from "@/lib/supabase";
 import { Plan } from "@/types/plan";
-import SuccessModal from "@/components/success-plan-modal";
-import { PendingExercise } from "@/components/plan-exercises";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState } from "react";
+import { Alert, ScrollView, StyleSheet } from "react-native";
 
 export default function CreatePlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
 
-  const handleCreate = async (
-    data: Omit<Plan, "user_id">
-  ) => {
+  useSelectedExercises(setExercises);
+
+  const handleCreate = async (data: Omit<Plan, "user_id">) => {
     try {
-      const { data: { session } } =
-        await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         Alert.alert("Error", "Not authenticated");
         return;
@@ -29,9 +31,7 @@ export default function CreatePlanScreen() {
       });
 
       const createdPlanId = Number(
-        createdPlan?.id ??
-        createdPlan?.plan?.id ??
-        createdPlan?.data?.id,
+        createdPlan?.id ?? createdPlan?.plan?.id ?? createdPlan?.data?.id,
       );
 
       if (!createdPlanId) {
@@ -59,6 +59,8 @@ export default function CreatePlanScreen() {
       }
 
       setModalVisible(true);
+      AsyncStorage.removeItem("ExercisesScreen.navData").catch(console.error);
+      AsyncStorage.removeItem("PlanForm.data").catch(console.error);
     } catch (e) {
       console.error(e);
       Alert.alert("Error", "Create failed");
@@ -74,7 +76,7 @@ export default function CreatePlanScreen() {
         onExercisesChange={setExercises}
       />
 
-	    <SuccessModal
+      <SuccessModal
         visible={modalVisible}
         message="Plan created successfully!"
         onClose={() => setModalVisible(false)}

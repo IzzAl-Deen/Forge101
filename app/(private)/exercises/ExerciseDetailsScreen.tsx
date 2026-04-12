@@ -4,6 +4,7 @@ import Exercises, {
 } from "@/api/exerciseApi";
 import { Kinetic } from "@/constants/theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -31,39 +32,46 @@ type ExerciseFormItem = {
   day: string[];
 };
 
-const weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const weekDays = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
 
 export default function ExerciseDetailsScreen() {
   const router = useRouter();
-  const {
-    planId,
-    returnId,
-    returnTo,
-    selectedIds,
-    planName,
-    planDifficulty,
-    planDuration,
-  } = useLocalSearchParams<{
-    planId?: string;
-    returnId?: string;
-    returnTo?: string;
+  const { selectedIds } = useLocalSearchParams<{
     selectedIds?: string;
-    planName?: string;
-    planDifficulty?: string;
-    planDuration?: string;
   }>();
   const [items, setItems] = useState<ExerciseFormItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [navData, setNavData] = useState<{
+    planId: string;
+    returnId: string;
+    returnTo: string;
+    planName: string;
+    planDifficulty: string;
+    planDuration: string;
+  } | null>(null);
 
   useEffect(() => {
-    async function loadSelectedExercises() {
-      if (!selectedIds) {
-        setLoading(false);
-        return;
-      }
-
+    async function loadData() {
       try {
+        const savedNav = await AsyncStorage.getItem("ExercisesScreen.navData");
+        if (savedNav) {
+          setNavData(JSON.parse(savedNav));
+        }
+
+        if (!selectedIds) {
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
 
         const response: LaravelPaginatedResponse<Exercise> =
@@ -89,14 +97,14 @@ export default function ExerciseDetailsScreen() {
 
         setItems(selected);
       } catch (error) {
-        console.error("Failed to load selected exercises:", error);
-        Alert.alert("Error", "Failed to load selected exercises");
+        console.error("Failed to load data:", error);
+        Alert.alert("Error", "Failed to load exercises");
       } finally {
         setLoading(false);
       }
     }
 
-    loadSelectedExercises();
+    loadData();
   }, [selectedIds]);
 
   function updateItem(
@@ -131,25 +139,30 @@ export default function ExerciseDetailsScreen() {
   }
 
   async function handleSaveExercises() {
-    if (!returnTo) {
+    if (!navData?.returnTo) {
       Alert.alert("Error", "Missing return page");
       return;
     }
 
     setSaving(true);
 
-    const selectedExercises = JSON.stringify(items);
+    try {
+      await AsyncStorage.setItem("selectedExercises", JSON.stringify(items));
 
-    router.replace({
-      pathname: returnTo as "/(private)/plans/create" | "/(private)/plans/edit/[id]",
-      params: {
-        id: returnId || planId || "",
-        selectedExercises,
-        planName: planName || "",
-        planDifficulty: planDifficulty || "",
-        planDuration: planDuration || "",
-      },
-    });
+      router.replace({
+        pathname: navData.returnTo as
+          | "/(private)/plans/create"
+          | "/(private)/plans/edit/[id]",
+        params: {
+          id: navData.returnId || navData.planId || "",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to save exercises:", error);
+      Alert.alert("Error", "Failed to save exercises");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function renderItem({ item }: { item: ExerciseFormItem }) {
@@ -177,7 +190,9 @@ export default function ExerciseDetailsScreen() {
               style={styles.input}
               keyboardType="numeric"
               value={item.sets}
-              onChangeText={(value) => updateItem(item.exercise_id, "sets", value)}
+              onChangeText={(value) =>
+                updateItem(item.exercise_id, "sets", value)
+              }
             />
           </View>
 
@@ -187,7 +202,9 @@ export default function ExerciseDetailsScreen() {
               style={styles.input}
               keyboardType="numeric"
               value={item.reps}
-              onChangeText={(value) => updateItem(item.exercise_id, "reps", value)}
+              onChangeText={(value) =>
+                updateItem(item.exercise_id, "reps", value)
+              }
             />
           </View>
 
@@ -200,7 +217,10 @@ export default function ExerciseDetailsScreen() {
                 return (
                   <Pressable
                     key={day}
-                    style={[styles.dayChip, isSelected && styles.dayChipSelected]}
+                    style={[
+                      styles.dayChip,
+                      isSelected && styles.dayChipSelected,
+                    ]}
                     onPress={() => toggleDay(item.exercise_id, day)}
                   >
                     <Text
@@ -230,7 +250,11 @@ export default function ExerciseDetailsScreen() {
             onPress={() => router.back()}
             style={styles.headerIconButton}
           >
-            <MaterialIcons name="arrow-back" size={24} color={Kinetic.accentLight} />
+            <MaterialIcons
+              name="arrow-back"
+              size={24}
+              color={Kinetic.accentLight}
+            />
           </Pressable>
 
           <Text style={styles.headerTitle}>EXERCISE DETAILS</Text>
