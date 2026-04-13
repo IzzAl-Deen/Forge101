@@ -13,7 +13,6 @@ export default function useSelectedExercises(
         if (selectedExercises) {
           const parsed = JSON.parse(selectedExercises);
           setExercises(parsed);
-          // Clear after loading
           await AsyncStorage.removeItem("selectedExercises");
         }
       } catch (error) {
