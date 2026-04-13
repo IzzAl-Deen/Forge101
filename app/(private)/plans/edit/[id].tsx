@@ -12,6 +12,8 @@ export default function EditPlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const { id } = useLocalSearchParams();
 
   const [plan, setPlan] = useState<Omit<Plan, "user_id"> | null>(null);
@@ -83,9 +85,12 @@ export default function EditPlanScreen() {
         }
       })
       .catch(console.error);
-  }, [id, exercises.length]);
+  }, [id]);
 
   const handleUpdate = async (updated: Omit<Plan, "user_id">) => {
+    if (isSaving) return;
+    setIsSaving(true);
+
     try {
       await Plans.update(Number(id), updated as Plan);
 
@@ -118,6 +123,8 @@ export default function EditPlanScreen() {
     } catch (err) {
       console.error(err);
       Alert.alert("Update failed");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -131,19 +138,9 @@ export default function EditPlanScreen() {
     }
   };
 
-  useEffect(() => {
-    AsyncStorage.getItem("selectedExercises")
-      .then((saved) => {
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setExercises((prev) => [...prev, ...parsed]);
-          AsyncStorage.removeItem("selectedExercises").catch(console.error);
-        }
-      })
-      .catch(console.error);
-  }, []);
 
-  if (!plan) return <ActivityIndicator />;
+
+  if (!plan) return <ActivityIndicator size={32} color={"#ccff00"} style={styles.container}/>;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -151,7 +148,7 @@ export default function EditPlanScreen() {
         initialValues={plan}
         planId={Number(id)}
         exercises={exercises}
-        submitLabel="UPDATE PLAN"
+        submitLabel={isSaving ? "UPDATING..." : "UPDATE PLAN"}
         onSubmit={handleUpdate}
         onExercisesChange={setExercises}
         onDelete={handleDelete}
