@@ -22,7 +22,6 @@ apiBase.interceptors.request.use(async (config) => {
 
   if (session) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
-    console.log(session.access_token);
   }
   return config;
 });
