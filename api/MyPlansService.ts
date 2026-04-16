@@ -21,16 +21,20 @@ export interface PlanExercise {
 export interface UserPlan {
   id: number;
   plan_id: number;
-  user_id: number;
+  user_id: string;
   progress_percent: number;
-  is_completed: boolean;
-  plan: Plan;
+  completed: boolean;
+  plan?: Plan;
 }
 
 export const myPlansService = {
-
   getUserSubscriptions: async (): Promise<UserPlan[]> => {
     const response = await apiBase.get('/user-plans');
+    return response.data;
+  },
+
+  getUserPlanById: async (userPlanId: number): Promise<UserPlan> => {
+    const response = await apiBase.get(`/user-plans/${userPlanId}`);
     return response.data;
   },
 
@@ -39,22 +43,34 @@ export const myPlansService = {
     return response.data;
   },
 
-getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
-  const response = await apiBase.get(`/plans/${planId}/exercises`);
-  const data = response.data;
+  getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
+    const response = await apiBase.get(`/plans/${planId}/exercises`);
+    const data = response.data;
 
-  return (data.exercises || []).map((exercise: any) => ({
-    id: exercise.id,
-    name: exercise.name,
-    image_url: exercise.image_url,
-    sets: exercise.pivot?.sets || 0,
-    reps: exercise.pivot?.reps || 0,
-    day: exercise.pivot?.day || 'Not Set',
-  }));
-},
+    return (data.exercises || []).map((exercise: any) => ({
+      id: exercise.id,
+      name: exercise.name,
+      image_url: exercise.image_url,
+      sets: exercise.pivot?.sets || 0,
+      reps: exercise.pivot?.reps || 0,
+      day: exercise.pivot?.day || 'Not Set',
+    }));
+  },
 
   getPlanById: async (planId: string) => {
     const response = await apiBase.get(`/plans/${planId}`);
+    return response.data;
+  },
+
+  completeExercise: async (userPlanId: number, exerciseId: number) => {
+    const response = await apiBase.post(
+      `/user-plans/${userPlanId}/complete-exercise/${exerciseId}`
+    );
+    return response.data;
+  },
+
+  unsubscribeUserPlan: async (userPlanId: number) => {
+    const response = await apiBase.delete(`/user-plans/${userPlanId}`);
     return response.data;
   },
 
@@ -67,7 +83,4 @@ getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
     const response = await apiBase.put(`/plans/${planId}/exercises/${exerciseId}`, data);
     return response.data;
   },
-
-
-
 };
