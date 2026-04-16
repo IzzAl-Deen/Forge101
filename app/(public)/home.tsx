@@ -8,50 +8,51 @@ import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-  };
+    const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState("");
+    const handleSearchChange = (text: string) => {
+        setSearchQuery(text);
+    };
 
-  return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView>
-        <Header title="Home" />
-        <SearchBar value={searchQuery} onChangeText={handleSearchChange} />
+    return (
+        <SafeAreaView style={styles.screen}>
+            <Header title="Home" />
+            <ScrollView>
 
-        <HomePlans />
-        <TodaysFocus />
+                <SearchBar value={searchQuery} onChangeText={handleSearchChange} />
 
-        <Pressable
-          style={styles.button}
-          onPress={() =>
-            router.push("/(private)/plans/(MySubscriptions)/MySubscriptions")
-          }
-        >
-          <Text style={styles.buttonText}>My Subscriptions</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
-  );
+                <HomePlans />
+                <TodaysFocus />
+
+                <Pressable
+                    style={styles.button}
+                    onPress={() =>
+                        router.push("/(private)/plans/(MySubscriptions)/MySubscriptions")
+                    }
+                >
+                    <Text style={styles.buttonText}>My Subscriptions</Text>
+                </Pressable>
+            </ScrollView>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#121212",
-    padding: 24,
-  },
-  button: {
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#cefc22",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#0a0a0a",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+    screen: {
+        flex: 1,
+        backgroundColor: "#121212",
+        padding: 24,
+    },
+    button: {
+        marginTop: 20,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: "#cefc22",
+        alignItems: "center",
+    },
+    buttonText: {
+        color: "#0a0a0a",
+        fontSize: 16,
+        fontWeight: "700",
+    },
 });
