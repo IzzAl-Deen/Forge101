@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import {ActivityIndicator,FlatList, Image,StyleSheet, Text, TouchableOpacity, View,} from "react-native";
 import Plans from "@/api/plansApi";
 import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 type PlanItem = {
   id: number;
@@ -15,9 +17,11 @@ export default function HomePlans() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchPlans();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+        fetchPlans();
+    }, [])
+);
 
   const fetchPlans = async () => {
     try {
