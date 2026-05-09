@@ -11,8 +11,8 @@ const MySubscriptionsScreen = () => {
     const { data: subscriptions, isLoading } = useQuery({
         queryKey: ['userSubscriptions'],
         queryFn: myPlansService.getUserSubscriptions,
-        refetchInterval: 5000,
         refetchOnWindowFocus: true,
+        refetchOnMount: true,
     });
 
     if (isLoading) {
