@@ -11,8 +11,8 @@ const MyPlansScreen = () => {
   const { data: plans, isLoading, error } = useQuery({
     queryKey: ['plans'],
     queryFn: myPlansService.getPlans,
-      refetchInterval: 5000,
-      refetchOnWindowFocus:true,   
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
   });
 
   if (isLoading) {

@@ -13,7 +13,7 @@ export const Header = ({ title }: HeaderProps) => {
     return (
         <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-    <MaterialIcons name="arrow-back-ios" size={22} color="#cefc22" />
+    <MaterialIcons  style={styles.backIcon} name="arrow-back-ios" size={22} color="#f4ffc9" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{title}</Text>
         <View style={{ width: 40 }} />
@@ -23,14 +23,28 @@ export const Header = ({ title }: HeaderProps) => {
 
 const styles = StyleSheet.create({
     header: {
-        height: 60,
+        height: 90,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
+        paddingHorizontal: 30,
+        paddingTop: 30,
         borderBottomWidth: 1,
-        borderBottomColor: '#1a1a1a'
+        borderBottomColor: '#262626',
+        backgroundColor: '#0e0e0e',
     },
-    backBtn: { padding: 5 },
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },backIcon: {
+        color: '#f4ffc9',
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginLeft: 10,
+    },
     headerTitle: { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 },
 });

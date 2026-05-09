@@ -1,8 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  SafeAreaView,
+  ActivityIndicator
+} from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { myPlansService } from '@/api/MyPlansService';
+import { myPlansService, PlanExercise } from '@/api/MyPlansService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { Header } from '@/components/PlanBuilder/Header';
 import { ExerciseCard } from '@/components/PlanBuilder/ExerciseCard';
@@ -18,14 +26,16 @@ const PlanBuilderScreen = () => {
     queryKey: ['plan', id],
     queryFn: () => myPlansService.getPlanById(id!),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const { data: exercises = [], isLoading: isExercisesLoading } = useQuery({
     queryKey: ['planExercises', id],
     queryFn: () => myPlansService.getPlanExercises(id!),
     enabled: !!id,
-    refetchInterval: 8000,
     refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const isLoading = isPlanLoading || isExercisesLoading;
@@ -34,6 +44,7 @@ const PlanBuilderScreen = () => {
     mutationFn: (exerciseId: number) => myPlansService.detachExercise(id!, exerciseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planExercises', id] });
+      queryClient.invalidateQueries({ queryKey: ['plan', id] });
     },
     onError: (error: any) => {
       console.error('Delete failed:', error);
@@ -46,7 +57,9 @@ const PlanBuilderScreen = () => {
 
   return (
       <SafeAreaView style={styles.container}>
-        <Header title={planData?.plan?.name || planData?.name || 'Loading Plan...'} />
+        <Header
+            title={planData?.plan?.name || planData?.name || 'Loading Plan...'}
+        />
 
         <View style={styles.content}>
           <View style={styles.heroSection}>
@@ -56,13 +69,15 @@ const PlanBuilderScreen = () => {
                 {planData?.plan?.name ? planData.plan.name.toUpperCase() : 'REFINE THE ENGINE'}
               </Text>
             </View>
+
             <AddButton
                 title="ADD EXERCISE"
                 route={{
                   pathname: '/(private)/plans/edit/[id]',
                   params: { id: id }
                 }}
-            />       </View>
+            />
+          </View>
 
           {isLoading ? (
               <ActivityIndicator color="#cefc22" style={{ marginTop: 50 }} />
@@ -96,8 +111,19 @@ const styles = StyleSheet.create({
     marginVertical: 30,
     gap: 15
   },
-  heroTag: { color: '#cefc22', fontSize: 10, fontWeight: 'bold', letterSpacing: 2, marginBottom: 5 },
-  heroTitle: { color: '#fff', fontSize: 32, fontWeight: '900', fontStyle: 'italic' },
+  heroTag: {
+    color: '#cefc22',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginBottom: 5
+  },
+  heroTitle: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '900',
+    fontStyle: 'italic'
+  },
 });
 
 export default PlanBuilderScreen;
