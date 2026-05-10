@@ -20,7 +20,14 @@ const Plans = {
         const response = await apiBase.get(`/plans/${id}/`);
         return response.data;
     },
-
+    createWithImage: async (formData: FormData) => {
+        const response = await apiBase.post("/plans/", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+        return response.data;
+    },
     create: async (plan: Plan) => {
         const response = await apiBase.post("/plans/", plan);
         return response.data;
