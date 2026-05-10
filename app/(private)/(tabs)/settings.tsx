@@ -1,28 +1,11 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
-import {
-	Alert,
-	Image,
-	Platform,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Switch,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { supabase } from "@/lib/supabase";
 import { Kinetic, Spacing } from "@/constants/theme";
-import {
-	authenticateWithBiometrics,
-	disableBiometrics,
-	enableBiometrics,
-	isBiometricAvailable,
-	isBiometricEnabled,
-} from "@/hooks/use-biometric-auth";
+import { authenticateWithBiometrics, disableBiometrics, enableBiometrics, isBiometricAvailable, isBiometricEnabled } from "@/hooks/use-biometric-auth";
 
 export default function SettingsScreen() {
 	const [fullName, setFullName] = useState("");
@@ -35,7 +18,9 @@ export default function SettingsScreen() {
 
 	useEffect(() => {
 		async function load() {
-			const { data: { user } } = await supabase.auth.getUser();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
 			if (user) {
 				setFullName(user.user_metadata?.full_name ?? "");
 				setAvatarUrl(user.user_metadata?.avatar_url ?? "");
@@ -73,7 +58,9 @@ export default function SettingsScreen() {
 					setTogglingBiometric(false);
 					return;
 				}
-				const { data: { session } } = await supabase.auth.getSession();
+				const {
+					data: { session },
+				} = await supabase.auth.getSession();
 				if (!session?.refresh_token) {
 					Alert.alert("Error", "No active session found.");
 					setTogglingBiometric(false);
@@ -133,13 +120,7 @@ export default function SettingsScreen() {
 						<Text style={styles.label}>FULL NAME</Text>
 						<View style={styles.inputRow}>
 							<MaterialIcons name="person-outline" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
-							<TextInput
-								style={styles.input}
-								placeholder="Your full name"
-								placeholderTextColor={Kinetic.textFaint}
-								value={fullName}
-								onChangeText={setFullName}
-							/>
+							<TextInput style={styles.input} placeholder="Your full name" placeholderTextColor={Kinetic.textFaint} value={fullName} onChangeText={setFullName} />
 						</View>
 					</View>
 
@@ -147,25 +128,12 @@ export default function SettingsScreen() {
 						<Text style={styles.label}>AVATAR URL</Text>
 						<View style={styles.inputRow}>
 							<MaterialIcons name="image" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
-							<TextInput
-								style={styles.input}
-								placeholder="https://example.com/avatar.jpg"
-								placeholderTextColor={Kinetic.textFaint}
-								value={avatarUrl}
-								onChangeText={setAvatarUrl}
-								autoCapitalize="none"
-								keyboardType="url"
-							/>
+							<TextInput style={styles.input} placeholder="https://example.com/avatar.jpg" placeholderTextColor={Kinetic.textFaint} value={avatarUrl} onChangeText={setAvatarUrl} autoCapitalize="none" keyboardType="url" />
 						</View>
 					</View>
 
 					<Pressable style={styles.btnWrapper} onPress={handleSave} disabled={saving}>
-						<LinearGradient
-							colors={[Kinetic.accentLight, Kinetic.accentPrimary]}
-							start={{ x: 0, y: 0 }}
-							end={{ x: 1, y: 0 }}
-							style={styles.btn}
-						>
+						<LinearGradient colors={[Kinetic.accentLight, Kinetic.accentPrimary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
 							<Text style={styles.btnText}>{saving ? "Saving..." : "SAVE CHANGES"}</Text>
 						</LinearGradient>
 					</Pressable>
@@ -177,25 +145,13 @@ export default function SettingsScreen() {
 						<Text style={styles.sectionTitle}>SECURITY</Text>
 						<View style={styles.rowItem}>
 							<View style={styles.rowItemLeft}>
-								<MaterialIcons
-									name={Platform.OS === "ios" ? "face" : "fingerprint"}
-									size={20}
-									color={Kinetic.accentPrimary}
-								/>
+								<MaterialIcons name={Platform.OS === "ios" ? "face" : "fingerprint"} size={20} color={Kinetic.accentPrimary} />
 								<View style={styles.rowItemText}>
-									<Text style={styles.rowItemTitle}>
-										{Platform.OS === "ios" ? "Face ID / Touch ID" : "Fingerprint Login"}
-									</Text>
+									<Text style={styles.rowItemTitle}>{Platform.OS === "ios" ? "Face ID / Touch ID" : "Fingerprint Login"}</Text>
 									<Text style={styles.rowItemSubtitle}>Log in without a password</Text>
 								</View>
 							</View>
-							<Switch
-								value={biometricEnabled}
-								onValueChange={handleBiometricToggle}
-								disabled={togglingBiometric}
-								trackColor={{ false: Kinetic.inputBorder, true: Kinetic.accentPrimary }}
-								thumbColor={biometricEnabled ? Kinetic.dark : Kinetic.textMuted}
-							/>
+							<Switch value={biometricEnabled} onValueChange={handleBiometricToggle} disabled={togglingBiometric} trackColor={{ false: Kinetic.inputBorder, true: Kinetic.accentPrimary }} thumbColor={biometricEnabled ? Kinetic.dark : Kinetic.textMuted} />
 						</View>
 					</View>
 				)}

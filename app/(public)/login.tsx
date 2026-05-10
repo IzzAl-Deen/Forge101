@@ -127,14 +127,8 @@ export default function LoginScreen() {
 
 					{showBiometric && (
 						<Pressable style={styles.biometricBtn} onPress={handleBiometricLogin} disabled={biometricLoading}>
-							<MaterialIcons
-								name={Platform.OS === "ios" ? "face" : "fingerprint"}
-								size={22}
-								color={Kinetic.accentPrimary}
-							/>
-							<Text style={styles.biometricText}>
-								{biometricLoading ? "Verifying..." : Platform.OS === "ios" ? "USE FACE ID" : "USE FINGERPRINT"}
-							</Text>
+							<MaterialIcons name={Platform.OS === "ios" ? "face" : "fingerprint"} size={22} color={Kinetic.accentPrimary} />
+							<Text style={styles.biometricText}>{biometricLoading ? "Verifying..." : Platform.OS === "ios" ? "USE FACE ID" : "USE FINGERPRINT"}</Text>
 						</Pressable>
 					)}
 

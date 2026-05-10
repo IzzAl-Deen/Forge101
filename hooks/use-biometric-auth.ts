@@ -51,7 +51,9 @@ export async function authenticateWithBiometrics(): Promise<"success" | "cancell
 	if (error) return "error";
 
 	// Update stored refresh token with the newly rotated one
-	const { data: { session } } = await supabase.auth.getSession();
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
 	if (session?.refresh_token) {
 		await SecureStore.setItemAsync(BIOMETRIC_REFRESH_TOKEN_KEY, session.refresh_token);
 	}
