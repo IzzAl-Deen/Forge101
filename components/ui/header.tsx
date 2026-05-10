@@ -27,15 +27,15 @@ export default function Header({ title }: { title: string }) {
 
 const styles = StyleSheet.create({
     header: {
-        height: 60,
+        height: 90,
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         paddingHorizontal: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#727272',
-        marginHorizontal: -25, 
-        marginTop: -25,
-        marginBottom: 15, 
+        marginHorizontal: -25,
+        marginTop: -20,
+        marginBottom: 15,
     },
     backBtn: {
         width: 40,
@@ -44,6 +44,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'rgba(255,255,255,0.05)',
+        marginBottom:5
     },
     backIcon: {
         color: '#f4ffc9',
@@ -53,10 +54,11 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         color: '#f4ffc9',
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '900',
         fontStyle: 'italic',
         marginLeft: 15,
         letterSpacing: 1,
+        marginBottom:12
     },
 });

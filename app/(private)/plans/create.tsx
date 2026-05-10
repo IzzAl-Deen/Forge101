@@ -1,87 +1,108 @@
-import Plans from "@/api/plansApi";
-import { PendingExercise } from "@/components/plan-exercises";
+import React, { useState, useEffect } from 'react';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
 import useSelectedExercises from "@/hooks/use-selected-exercises";
 import { supabase } from "@/lib/supabase";
-import { Plan } from "@/types/plan";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet } from "react-native";
+import Plans from "@/api/plansApi";
+import { PendingExercise } from "@/components/plan-exercises";
 
+const IMAGE_STORAGE_KEY = "PlanForm.selectedImage";
+const FORM_DATA_KEY = "PlanForm.data";
 export default function CreatePlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   useSelectedExercises(setExercises);
 
-  const handleCreate = async (data: Omit<Plan, "user_id">) => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) {
-        Alert.alert("Error", "Not authenticated");
-        return;
+  useEffect(() => {
+    AsyncStorage.getItem(IMAGE_STORAGE_KEY)
+        .then((savedImage) => {
+          if (savedImage) setSelectedImage(savedImage);
+        })
+        .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (selectedImage) {
+      AsyncStorage.setItem(IMAGE_STORAGE_KEY, selectedImage).catch(console.error);
+    } else {
+      AsyncStorage.removeItem(IMAGE_STORAGE_KEY).catch(console.error);
+    }
+  }, [selectedImage]);
+
+  const createPlanMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
+
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('difficulty', data.difficulty);
+      formData.append('duration_minutes', data.duration_minutes.toString());
+
+      if (selectedImage) {
+        const filename = selectedImage.split('/').pop() || 'plan.jpg';
+        formData.append('image', {
+          uri: selectedImage,
+          name: filename,
+          type: 'image/jpeg',
+        } as any);
       }
 
-      const createdPlan = await Plans.create({
-        ...data,
-        user_id: session.user.id,
-      });
-
-      const createdPlanId = Number(
-        createdPlan?.id ?? createdPlan?.plan?.id ?? createdPlan?.data?.id,
-      );
-
-      if (!createdPlanId) {
-        console.error("Create plan response:", createdPlan);
-        Alert.alert("Error", "Plan created but id was not found");
-        return;
-      }
-
-      let orderIndex = 1;
-
-      for (const exercise of exercises) {
-        const days = exercise.day.length > 0 ? exercise.day : ["monday"];
-
-        for (const day of days) {
-          await Plans.attachExercise(createdPlanId, {
-            exercise_id: exercise.exercise_id,
-            sets: Number(exercise.sets) || 0,
-            reps: Number(exercise.reps) || 0,
-            day,
-            order_index: orderIndex,
-          });
-
-          orderIndex += 1;
-        }
-      }
+      return Plans.createWithImage(formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
 
       setModalVisible(true);
-      AsyncStorage.removeItem("ExercisesScreen.navData").catch(console.error);
-      AsyncStorage.removeItem("PlanForm.data").catch(console.error);
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "Create failed");
+      setSelectedImage(null);
+      AsyncStorage.removeItem(IMAGE_STORAGE_KEY);
+      AsyncStorage.removeItem(FORM_DATA_KEY);
+    },
+    onError: (error: any) => {
+      console.error(error);
+      Alert.alert("Error", error?.response?.data?.message || "Failed to create plan");
+    }
+  });
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <PlanForm
-        exercises={exercises}
-        submitLabel="SAVE PLAN"
-        onSubmit={handleCreate}
-        onExercisesChange={setExercises}
-      />
+      <ScrollView contentContainerStyle={styles.container}>
+        <PlanForm
+            exercises={exercises}
+            submitLabel={createPlanMutation.isPending ? "CREATING PLAN..." : "SAVE PLAN"}
+            onSubmit={(data) => createPlanMutation.mutate(data)}
+            onExercisesChange={setExercises}
+            disabled={createPlanMutation.isPending}
+            selectedImage={selectedImage}
+            onPickImage={pickImage}
+        />
 
-      <SuccessModal
-        visible={modalVisible}
-        message="Plan created successfully!"
-        onClose={() => setModalVisible(false)}
-      />
-    </ScrollView>
+        <SuccessModal
+            visible={modalVisible}
+            message="Plan created successfully!"
+            onClose={() => setModalVisible(false)}
+        />
+      </ScrollView>
   );
 }
 
@@ -89,12 +110,6 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: "#121212",
-    padding: 24,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 32,
+    padding: 24
   },
 });

@@ -1,3 +1,4 @@
+// components/planform.tsx
 import { useAddExercise } from "@/hooks/use-add-exercise";
 import { useRemoveExercise } from "@/hooks/use-remove-exercise";
 import { useUpdateExercise } from "@/hooks/use-update-exercise";
@@ -5,7 +6,7 @@ import { Plan } from "@/types/plan";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
 import PlanExercises, { PendingExercise } from "./plan-exercises";
 import ImageSection from "./planform-components/image-section";
 import PlaninputForm, {
@@ -21,17 +22,23 @@ type Props = {
   onSubmit: (data: Omit<Plan, "user_id">) => void;
   onExercisesChange?: (exercises: PendingExercise[]) => void;
   onDelete?: () => void;
+  disabled?: boolean;
+  selectedImage?: string | null;
+  onPickImage?: () => void;
 };
 
 export default function PlanForm({
-  initialValues,
-  planId,
-  exercises,
-  submitLabel,
-  onSubmit,
-  onExercisesChange,
-  onDelete,
-}: Props) {
+                                   initialValues,
+                                   planId,
+                                   exercises,
+                                   submitLabel,
+                                   onSubmit,
+                                   onExercisesChange,
+                                   onDelete,
+                                   disabled = false,
+                                   selectedImage,
+                                   onPickImage,
+                                 }: Props) {
   const [form, setForm] = useState<Omit<Plan, "user_id">>({
     name: "",
     difficulty: "Easy",
@@ -42,14 +49,14 @@ export default function PlanForm({
 
   useEffect(() => {
     AsyncStorage.getItem(FORM_KEY)
-      .then((saved) => {
-        if (saved) {
-          setForm(JSON.parse(saved));
-        } else if (initialValues) {
-          setForm(initialValues);
-        }
-      })
-      .catch(console.error);
+        .then((saved) => {
+          if (saved) {
+            setForm(JSON.parse(saved));
+          } else if (initialValues) {
+            setForm(initialValues);
+          }
+        })
+        .catch(console.error);
   }, [initialValues]);
 
   useEffect(() => {
@@ -71,63 +78,92 @@ export default function PlanForm({
   });
 
   return (
-    <View style={styles.screen}>
-      <Header title={initialValues ? "Edit Plan" : "Create Plan"} />
+      <View style={styles.screen}>
+        <Header title={initialValues ? "Edit Plan" : "Create Plan"} />
 
-      <View>
-        <ImageSection />
+        <View>
+          <ImageSection />
 
-        <View style={styles.form}>
-          <PlaninputForm
-            lable="PLAN NAME"
-            inputtype="name"
-            value={form.name}
-            placeholder="Full Body Workout"
-            onChange={(val) => handleChange("name", val)}
-          />
 
-          <PlaninputFormDifficulty
-            lable="DIFFICULTY"
-            inputtype="difficulty"
-            value={form.difficulty}
-            onChange={(val) => handleChange("difficulty", val)}
-          />
 
-          <PlaninputForm
-            lable="DURATION (MINUTES)"
-            inputtype="duration_minutes"
-            value={form.duration_minutes}
-            onChange={(val) => handleChange("duration_minutes", val)}
-            leftsidetext="MIN"
-            placeholder="60"
-          />
 
-          <PlanExercises
-            exercises={exercises}
-            onAdd={addExercise}
-            onRemove={removeExercise}
-            onChange={updateExercise}
-          />
 
-          <TouchableOpacity onPress={() => onSubmit(form)}>
-            <LinearGradient
-              colors={["#eff8c6", "#ccff00"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.saveButton}
+          <View style={styles.form}>
+            <PlaninputForm
+                lable="PLAN NAME"
+                inputtype="name"
+                value={form.name}
+                placeholder="Full Body Workout"
+                onChange={(val) => handleChange("name", val)}
+            />
+
+            <PlaninputFormDifficulty
+                lable="DIFFICULTY"
+                inputtype="difficulty"
+                value={form.difficulty}
+                onChange={(val) => handleChange("difficulty", val)}
+            />
+
+            <PlaninputForm
+                lable="DURATION (MINUTES)"
+                inputtype="duration_minutes"
+                value={form.duration_minutes}
+                onChange={(val) => handleChange("duration_minutes", val)}
+                leftsidetext="MIN"
+                placeholder="60"
+            />
+
+            <PlanExercises
+                exercises={exercises}
+                onAdd={addExercise}
+                onRemove={removeExercise}
+                onChange={updateExercise}
+            />
+            {onPickImage && (
+                <View style={styles.imagePickerSection}>
+                  {selectedImage && (
+                      <Image
+                          source={{ uri: selectedImage }}
+                          style={styles.previewImage}
+                      />
+                  )}
+
+                  <TouchableOpacity
+                      style={styles.pickImageBtn}
+                      onPress={onPickImage}
+                      disabled={disabled}
+                  >
+                    <Text style={styles.pickImageText}>
+                      {selectedImage ? "Change Plan Image" : "Pick Plan Image"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+            )}
+            <TouchableOpacity
+                onPress={() => onSubmit(form)}
+                disabled={disabled}
+                activeOpacity={disabled ? 1 : 0.7}
             >
-              <Text style={styles.saveText}>{submitLabel}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {onDelete && (
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-              <Text style={styles.deleteText}>DELETE PLAN</Text>
+              <LinearGradient
+                  colors={disabled ? ["#555", "#666"] : ["#eff8c6", "#ccff00"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.saveButton, disabled && styles.saveButtonDisabled]}
+              >
+                <Text style={[styles.saveText, disabled && { opacity: 0.7 }]}>
+                  {submitLabel}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
-          )}
+
+            {onDelete && (
+                <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+                  <Text style={styles.deleteText}>DELETE PLAN</Text>
+                </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
-    </View>
   );
 }
 
@@ -138,7 +174,28 @@ const styles = StyleSheet.create({
   },
 
   form: {
-    paddingTop: 18,
+    paddingTop: 10,
+  },
+
+  imagePickerSection: {
+    marginBottom: 24,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  pickImageBtn: {
+    backgroundColor: '#333',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  pickImageText: {
+    color: '#cefc22',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 
   saveButton: {
@@ -146,6 +203,10 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 8,
     alignItems: "center",
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
 
   saveText: {
@@ -161,7 +222,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderColor: "#ff67679a",
     paddingVertical: 18,
-    letterSpacing: 1,
   },
 
   deleteText: {
