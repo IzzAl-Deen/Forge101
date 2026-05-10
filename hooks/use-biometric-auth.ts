@@ -50,7 +50,6 @@ export async function authenticateWithBiometrics(): Promise<"success" | "cancell
 	const { error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
 	if (error) return "error";
 
-	// Update stored refresh token with the newly rotated one
 	const {
 		data: { session },
 	} = await supabase.auth.getSession();

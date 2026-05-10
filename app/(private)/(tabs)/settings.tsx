@@ -52,7 +52,7 @@ export default function SettingsScreen() {
 		setTogglingBiometric(true);
 		try {
 			if (value) {
-				// Verify identity before enabling
+
 				const result = await authenticateWithBiometrics();
 				if (result !== "success") {
 					setTogglingBiometric(false);
@@ -95,13 +95,11 @@ export default function SettingsScreen() {
 	return (
 		<View style={styles.container}>
 			<ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-				{/* Header */}
 				<View style={styles.header}>
 					<Text style={styles.brand}>FORGE</Text>
 					<Text style={styles.pageTitle}>SETTINGS</Text>
 				</View>
 
-				{/* Avatar preview */}
 				<View style={styles.avatarSection}>
 					{avatarUrl ? (
 						<Image source={{ uri: avatarUrl }} style={styles.avatar} />
@@ -112,7 +110,6 @@ export default function SettingsScreen() {
 					)}
 				</View>
 
-				{/* Profile section */}
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>PROFILE</Text>
 
@@ -139,7 +136,6 @@ export default function SettingsScreen() {
 					</Pressable>
 				</View>
 
-				{/* Security section */}
 				{biometricAvailable && (
 					<View style={styles.section}>
 						<Text style={styles.sectionTitle}>SECURITY</Text>
@@ -156,7 +152,6 @@ export default function SettingsScreen() {
 					</View>
 				)}
 
-				{/* Account section */}
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>ACCOUNT</Text>
 					<View style={styles.infoRow}>
@@ -165,7 +160,6 @@ export default function SettingsScreen() {
 					</View>
 				</View>
 
-				{/* Sign out */}
 				<Pressable style={styles.signOutBtn} onPress={handleSignOut}>
 					<MaterialIcons name="logout" size={18} color={Kinetic.error} />
 					<Text style={styles.signOutText}>SIGN OUT</Text>
