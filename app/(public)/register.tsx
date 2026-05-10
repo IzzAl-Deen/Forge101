@@ -3,8 +3,8 @@ import { useRouter } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { supabase } from "@/lib/supabase";
 import { Kinetic } from "@/constants/theme";
+import { supabase } from "@/lib/supabase";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{7,}$/;
@@ -13,7 +13,11 @@ type FormData = { name: string; email: string; password: string };
 
 export default function RegisterScreen() {
 	const router = useRouter();
-	const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+	const {
+		control,
+		handleSubmit,
+		formState: { errors, isSubmitting },
+	} = useForm<FormData>({
 		defaultValues: { name: "", email: "", password: "" },
 	});
 
@@ -42,20 +46,7 @@ export default function RegisterScreen() {
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>NAME</Text>
-						<Controller
-							control={control}
-							name="name"
-							rules={{ required: "Full name is required." }}
-							render={({ field: { onChange, value } }) => (
-								<TextInput
-									style={[styles.input, errors.name ? styles.inputError : null]}
-									placeholder="Full Name"
-									placeholderTextColor={Kinetic.textFaint}
-									value={value}
-									onChangeText={onChange}
-								/>
-							)}
-						/>
+						<Controller control={control} name="name" rules={{ required: "Full name is required." }} render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.name ? styles.inputError : null]} placeholder="Full Name" placeholderTextColor={Kinetic.textFaint} value={value} onChangeText={onChange} />} />
 						{errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
 					</View>
 
@@ -68,17 +59,7 @@ export default function RegisterScreen() {
 								required: "Email is required.",
 								pattern: { value: EMAIL_REGEX, message: "Enter a valid email address." },
 							}}
-							render={({ field: { onChange, value } }) => (
-								<TextInput
-									style={[styles.input, errors.email ? styles.inputError : null]}
-									placeholder="example@gmail.com"
-									placeholderTextColor={Kinetic.textFaint}
-									autoCapitalize="none"
-									keyboardType="email-address"
-									value={value}
-									onChangeText={onChange}
-								/>
-							)}
+							render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder="example@gmail.com" placeholderTextColor={Kinetic.textFaint} autoCapitalize="none" keyboardType="email-address" value={value} onChangeText={onChange} />}
 						/>
 						{errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
 					</View>
@@ -92,16 +73,7 @@ export default function RegisterScreen() {
 								required: "Password is required.",
 								pattern: { value: PASSWORD_REGEX, message: "7+ chars, uppercase, lowercase, number, and special character." },
 							}}
-							render={({ field: { onChange, value } }) => (
-								<TextInput
-									style={[styles.input, errors.password ? styles.inputError : null]}
-									placeholder="••••••••"
-									placeholderTextColor={Kinetic.textFaint}
-									secureTextEntry
-									value={value}
-									onChangeText={onChange}
-								/>
-							)}
+							render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.password ? styles.inputError : null]} placeholder="••••••••" placeholderTextColor={Kinetic.textFaint} secureTextEntry value={value} onChangeText={onChange} />}
 						/>
 						{errors.password ? <Text style={styles.errorText}>{errors.password.message}</Text> : null}
 					</View>

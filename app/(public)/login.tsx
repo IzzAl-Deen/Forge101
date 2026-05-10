@@ -1,11 +1,13 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { supabase } from "@/lib/supabase";
 import { Kinetic, Spacing } from "@/constants/theme";
+import { authenticateWithBiometrics, isBiometricAvailable, isBiometricEnabled } from "@/hooks/use-biometric-auth";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -16,11 +18,35 @@ type FormData = {
 
 export default function LoginScreen() {
 	const router = useRouter();
+	const [showBiometric, setShowBiometric] = useState(false);
+	const [biometricLoading, setBiometricLoading] = useState(false);
+
 	const {
 		control,
 		handleSubmit,
 		formState: { errors, isSubmitting },
 	} = useForm<FormData>({ defaultValues: { email: "", password: "" } });
+
+	useEffect(() => {
+		async function checkBiometric() {
+			const available = await isBiometricAvailable();
+			if (!available) return;
+			const enabled = await isBiometricEnabled();
+			setShowBiometric(enabled);
+		}
+		checkBiometric();
+	}, []);
+
+	async function handleBiometricLogin() {
+		setBiometricLoading(true);
+		const result = await authenticateWithBiometrics();
+		setBiometricLoading(false);
+		if (result === "success") {
+			router.replace("/(private)/(tabs)");
+		} else if (result === "error") {
+			Alert.alert("Biometric login failed", "Could not verify identity. Please log in with your password.");
+		}
+	}
 
 	async function onSubmit(data: FormData) {
 		const { error } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
@@ -98,6 +124,19 @@ export default function LoginScreen() {
 							<Text style={styles.btnText}>{isSubmitting ? "Logging in..." : "LOGIN ⚡"}</Text>
 						</LinearGradient>
 					</Pressable>
+
+					{showBiometric && (
+						<Pressable style={styles.biometricBtn} onPress={handleBiometricLogin} disabled={biometricLoading}>
+							<MaterialIcons
+								name={Platform.OS === "ios" ? "face" : "fingerprint"}
+								size={22}
+								color={Kinetic.accentPrimary}
+							/>
+							<Text style={styles.biometricText}>
+								{biometricLoading ? "Verifying..." : Platform.OS === "ios" ? "USE FACE ID" : "USE FINGERPRINT"}
+							</Text>
+						</Pressable>
+					)}
 
 					<View style={styles.dividerRow}>
 						<View style={styles.dividerLine} />
@@ -324,5 +363,23 @@ const styles = StyleSheet.create({
 		fontSize: 11,
 		color: Kinetic.error,
 		marginTop: 4,
+	},
+	biometricBtn: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: Spacing.xs + 2,
+		height: 48,
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: "rgba(184,255,26,0.3)",
+		backgroundColor: "rgba(184,255,26,0.06)",
+		marginTop: Spacing.sm,
+	},
+	biometricText: {
+		fontSize: 13,
+		fontWeight: "600",
+		letterSpacing: 1.5,
+		color: Kinetic.accentPrimary,
 	},
 });
