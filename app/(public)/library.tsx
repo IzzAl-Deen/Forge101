@@ -1,10 +1,10 @@
-import { FilterModal } from "@/components/filter-modal";
 import { ExerciseCard } from "@/components/exercise-card";
+import { FilterModal } from "@/components/filter-modal";
 import { useExercises } from "@/hooks/use-exercises";
 import { CATEGORIES, DIFFICULTIES, MUSCLES } from "@/types/exercise";
-import type { ExerciseFilters } from "@/types/exercise";
+import type { Exercise, ExerciseFilters } from "@/types/exercise";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,21 +17,60 @@ import {
 } from "react-native";
 
 export default function LibraryScreen() {
+  const listRef = useRef<FlatList<Exercise>>(null);
+
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<ExerciseFilters>({
     target_muscle: null,
     difficulty: null,
     category: null,
   });
-  const [activeModal, setActiveModal] = useState<keyof ExerciseFilters | null>(null);
+  const [activeModal, setActiveModal] = useState<keyof ExerciseFilters | null>(
+    null,
+  );
 
-  const { exercises, loading, loadingMore } = useExercises(search, filters);
+  const {
+    exercises,
+    loading,
+    loadingMore,
+    isError,
+    error,
+    refetch,
+    loadMore,
+    hasMore,
+  } = useExercises(search, filters);
 
-  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter(Boolean).length;
+  }, [filters]);
 
-  const handleApplyFilter = (newFilters: ExerciseFilters) => {
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearch("");
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, []);
+
+  const handleApplyFilter = useCallback((newFilters: ExerciseFilters) => {
     setFilters(newFilters);
-  };
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, []);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !loadingMore) {
+      loadMore();
+    }
+  }, [hasMore, loadingMore, loadMore]);
+
+  const renderExercise = useCallback(
+    ({ item }: { item: Exercise }) => (
+      <ExerciseCard item={item} featured={false} />
+    ),
+    [],
+  );
 
   const FilterChip = ({
     label,
@@ -41,6 +80,7 @@ export default function LibraryScreen() {
     type: keyof ExerciseFilters;
   }) => {
     const isActive = !!filters[type];
+
     return (
       <TouchableOpacity
         style={[styles.chip, isActive && styles.chipActive]}
@@ -49,11 +89,12 @@ export default function LibraryScreen() {
         <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
           {filters[type] ?? label}
         </Text>
+
         <Ionicons
           name="chevron-down"
           size={13}
           color={isActive ? "#000" : "#aaa"}
-          style={{ marginLeft: 2 }}
+          style={styles.chipIcon}
         />
       </TouchableOpacity>
     );
@@ -61,15 +102,15 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Ionicons name="menu" size={24} color="#C8FF00" />
           <Text style={styles.headerTitle}>EXERCISE LIBRARY</Text>
         </View>
+
         <TouchableOpacity style={styles.headerRight}>
           <Ionicons name="options-outline" size={22} color="#C8FF00" />
+
           {activeFiltersCount > 0 && (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
@@ -78,51 +119,64 @@ export default function LibraryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={16} color="#666" style={{ marginRight: 8 }} />
+        <Ionicons
+          name="search"
+          size={16}
+          color="#666"
+          style={styles.searchIcon}
+        />
+
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or description"
           placeholderTextColor="#555"
           value={search}
-          onChangeText={setSearch}
+          onChangeText={handleSearchChange}
           returnKeyType="search"
         />
+
         {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch("")}>
+          <TouchableOpacity onPress={handleClearSearch}>
             <Ionicons name="close-circle" size={16} color="#555" />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Filter Chips */}
       <View style={styles.chipsRow}>
         <FilterChip label="Target Muscle" type="target_muscle" />
         <FilterChip label="Difficulty" type="difficulty" />
         <FilterChip label="Category" type="category" />
       </View>
 
-      {/* List */}
-      {loading ? (
+      {isError ? (
+        <View style={styles.centered}>
+          <Ionicons name="warning-outline" size={48} color="#C8FF00" />
+          <Text style={styles.emptyText}>
+            {error instanceof Error ? error.message : "Failed to load exercises"}
+          </Text>
+
+          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#C8FF00" />
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           data={exercises}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <ExerciseCard
-              item={item}
-           featured={false}
-            />
-          )}
+          renderItem={renderExercise}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.4}
           ListFooterComponent={
             loadingMore ? (
-              <ActivityIndicator color="#C8FF00" style={{ marginVertical: 16 }} />
+              <ActivityIndicator color="#C8FF00" style={styles.footerLoader} />
             ) : null
           }
           ListEmptyComponent={
@@ -134,7 +188,6 @@ export default function LibraryScreen() {
         />
       )}
 
-      {/* Filter Modal */}
       {activeModal && (
         <FilterModal
           visible={true}
@@ -146,8 +199,8 @@ export default function LibraryScreen() {
             activeModal === "target_muscle"
               ? MUSCLES
               : activeModal === "difficulty"
-              ? DIFFICULTIES
-              : CATEGORIES
+                ? DIFFICULTIES
+                : CATEGORIES
           }
         />
       )}
@@ -212,6 +265,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#222",
   },
+  searchIcon: {
+    marginRight: 8,
+  },
   searchInput: {
     flex: 1,
     color: "#fff",
@@ -245,6 +301,9 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: "#000",
   },
+  chipIcon: {
+    marginLeft: 2,
+  },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
@@ -258,8 +317,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
-    color: "#444",
+    color: "#777",
     fontSize: 15,
     fontWeight: "600",
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  footerLoader: {
+    marginVertical: 16,
+  },
+  retryBtn: {
+    backgroundColor: "#C8FF00",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryText: {
+    color: "#000",
+    fontWeight: "800",
   },
 });
