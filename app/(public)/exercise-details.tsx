@@ -53,7 +53,7 @@ export default function ExerciseDetailsScreen() {
         </View>
 
         <View style={styles.centered}>
-          <Ionicons name="warning-outline" size={48} color="#C8FF00" />
+          <Ionicons name="warning-outline" size={46} color="#C8FF00" />
 
           <Text style={styles.errorText}>
             {error instanceof Error ? error.message : "Failed to load exercise"}
@@ -82,18 +82,17 @@ export default function ExerciseDetailsScreen() {
 
   const selected = isSelected(exercise.id);
 
-  const handleAddToPlan = async () => {
+  const handlePlanPress = async () => {
     try {
       if (selected) {
         await removeExercise(exercise.id);
-        Alert.alert("Removed", "Exercise removed from your plan.");
-        return;
+      } else {
+        await addExercise(exercise);
       }
 
-      await addExercise(exercise);
-      Alert.alert("Added", "Exercise added to your plan.");
-    } catch (error) {
-      Alert.alert("Error", "Could not update your plan.");
+      Alert.alert("Done", "Plan updated");
+    } catch {
+      Alert.alert("Error", "Try again");
     }
   };
 
@@ -119,20 +118,13 @@ export default function ExerciseDetailsScreen() {
             />
           ) : (
             <View style={styles.heroPlaceholder}>
-              <Ionicons name="barbell-outline" size={80} color="#333" />
+              <Ionicons name="barbell-outline" size={76} color="#333" />
             </View>
           )}
 
           <View style={styles.heroOverlay} />
 
           <View style={styles.heroContent}>
-            <View style={styles.focusBadge}>
-              <Ionicons name="flash" size={10} color="#000" />
-              <Text style={styles.focusBadgeText}>
-                {exercise.category?.toUpperCase() || "EXERCISE"}
-              </Text>
-            </View>
-
             <Text style={styles.exerciseName}>
               {exercise.name.toUpperCase()}
             </Text>
@@ -158,23 +150,24 @@ export default function ExerciseDetailsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>OVERVIEW</Text>
 
-          <View style={styles.overviewCard}>
-            <Text style={styles.overviewText}>
+          <View style={styles.card}>
+            <Text style={styles.description}>
               {exercise.description || "No description available."}
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MUSCLE FOCUS</Text>
+          <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-          <View style={styles.muscleCard}>
-            <Text style={styles.muscleName}>{exercise.target_muscle}</Text>
-            <Text style={styles.muscleRole}>Main target muscle</Text>
+          <View style={styles.card}>
+            <Text style={styles.categoryText}>
+              {exercise.category || "General"}
+            </Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={handleAddToPlan}>
+        <TouchableOpacity style={styles.addBtn} onPress={handlePlanPress}>
           <Text style={styles.addBtnText}>
             {selected ? "REMOVE FROM PLAN" : "ADD TO PLAN"}
           </Text>
@@ -239,7 +232,7 @@ const styles = StyleSheet.create({
     width: 30,
   },
   heroContainer: {
-    height: 300,
+    height: 290,
     backgroundColor: "#141414",
   },
   heroImage: {
@@ -256,34 +249,17 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   heroContent: {
     position: "absolute",
-    bottom: 20,
+    bottom: 22,
     left: 16,
     right: 16,
   },
-  focusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#C8FF00",
-    alignSelf: "flex-start",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 4,
-    marginBottom: 8,
-  },
-  focusBadgeText: {
-    color: "#000",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
   exerciseName: {
     color: "#fff",
-    fontSize: 32,
+    fontSize: 31,
     fontWeight: "900",
     letterSpacing: 1,
     lineHeight: 36,
@@ -321,8 +297,8 @@ const styles = StyleSheet.create({
   },
   section: {
     marginHorizontal: 16,
-    marginTop: 24,
-    gap: 12,
+    marginTop: 22,
+    gap: 10,
   },
   sectionTitle: {
     color: "#fff",
@@ -330,35 +306,23 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2,
   },
-  overviewCard: {
+  card: {
     backgroundColor: "#141414",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: "#1E1E1E",
   },
-  overviewText: {
+  description: {
     color: "#aaa",
     fontSize: 14,
     lineHeight: 22,
   },
-  muscleCard: {
-    backgroundColor: "#141414",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#1E1E1E",
-  },
-  muscleName: {
+  categoryText: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "700",
     textTransform: "capitalize",
-  },
-  muscleRole: {
-    color: "#555",
-    fontSize: 12,
-    marginTop: 4,
   },
   addBtn: {
     flexDirection: "row",
