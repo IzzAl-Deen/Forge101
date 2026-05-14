@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import * as FileSystem from 'expo-file-system/legacy';
 
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
@@ -13,6 +15,16 @@ import { PendingExercise } from "@/components/plan-exercises";
 
 const IMAGE_STORAGE_KEY = "PlanForm.selectedImage";
 const FORM_DATA_KEY = "PlanForm.data";
+
+const base64ToArrayBuffer = (base64: string) => {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+};
+
 export default function CreatePlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
@@ -39,36 +51,56 @@ export default function CreatePlanScreen() {
 
   const createPlanMutation = useMutation({
     mutationFn: async (data: any) => {
+      let finalImageUrl = null;
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Not authenticated");
 
-      const formData = new FormData();
-      formData.append('name', data.name);
-      formData.append('difficulty', data.difficulty);
-      formData.append('duration_minutes', data.duration_minutes.toString());
-
       if (selectedImage) {
-        const filename = selectedImage.split('/').pop() || 'plan.jpg';
-        formData.append('image', {
-          uri: selectedImage,
-          name: filename,
-          type: 'image/jpeg',
-        } as any);
+        const fileExt = selectedImage.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `plans/${fileName}`;
+
+        const base64 = await FileSystem.readAsStringAsync(selectedImage, {
+          encoding: 'base64' as any,
+        });
+
+        const arrayBuffer = base64ToArrayBuffer(base64);
+
+        const { error: uploadError } = await supabase.storage
+            .from('plans')
+            .upload(filePath, arrayBuffer, {
+              contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
+              upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+            .from('plans')
+            .getPublicUrl(filePath);
+
+        finalImageUrl = publicUrlData.publicUrl;
       }
 
-      return Plans.createWithImage(formData);
+      return Plans.create({
+        name: data.name,
+        difficulty: data.difficulty,
+        duration_minutes: parseInt(data.duration_minutes),
+        image_url: finalImageUrl,
+        user_id: session.user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
-
       setModalVisible(true);
       setSelectedImage(null);
       AsyncStorage.removeItem(IMAGE_STORAGE_KEY);
       AsyncStorage.removeItem(FORM_DATA_KEY);
     },
     onError: (error: any) => {
-      console.error(error);
-      Alert.alert("Error", error?.response?.data?.message || "Failed to create plan");
+      console.error("Creation Error:", error);
+      Alert.alert("Error", error.message || "Failed to create plan");
     }
   });
 
