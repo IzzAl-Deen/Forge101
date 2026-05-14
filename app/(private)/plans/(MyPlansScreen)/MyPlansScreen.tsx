@@ -50,8 +50,10 @@ const MyPlansScreen = () => {
     if (isLoading && plans.length === 0) {
         return (
             <SafeAreaView style={styles.container}>
-                <ActivityIndicator style={{ flex: 1 }} color="#f4ffc9" size="large" />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#cefc22" />
                 <Text style={styles.loadingText}>Loading your plans...</Text>
+                </View>
             </SafeAreaView>
         );
     }
@@ -97,6 +99,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 30,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     screenTitle: {
         color: '#fff',
