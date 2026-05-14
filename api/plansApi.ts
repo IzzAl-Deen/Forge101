@@ -1,5 +1,5 @@
 import apiBase from "./ApiBase";
-import { Plan } from "../types/plan";
+import { Plan } from "@/types/plan";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 type AttachExerciseData = {

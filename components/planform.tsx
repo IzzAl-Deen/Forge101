@@ -1,17 +1,14 @@
-// components/planform.tsx
 import { useAddExercise } from "@/hooks/use-add-exercise";
 import { useRemoveExercise } from "@/hooks/use-remove-exercise";
 import { useUpdateExercise } from "@/hooks/use-update-exercise";
 import { Plan } from "@/types/plan";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
 import PlanExercises, { PendingExercise } from "./plan-exercises";
 import ImageSection from "./planform-components/image-section";
-import PlaninputForm, {
-  PlaninputFormDifficulty,
-} from "./planform-components/plan-input";
+import PlaninputForm, {PlaninputFormDifficulty,} from "./planform-components/plan-input";
 import Header from "./ui/header";
 
 type Props = {
