@@ -1,6 +1,6 @@
 import Exercises, {
-    Exercise,
-    LaravelPaginatedResponse,
+  Exercise,
+  LaravelPaginatedResponse,
 } from "@/api/exerciseApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -111,6 +111,11 @@ export function useExercisesScreen() {
     });
   }, [exercises, searchText, selectedMuscle]);
 
+  const selectedCount = useMemo(
+    () => selectedExercises.length,
+    [selectedExercises],
+  );
+
   function toggleExercise(exercise: Exercise) {
     const key = String(exercise.id ?? exercise.name);
 
@@ -149,7 +154,7 @@ export function useExercisesScreen() {
     selectedMuscle,
     setSelectedMuscle,
     selectedExercises,
-    selectedCount: selectedExercises.length,
+    selectedCount,
     toggleExercise,
     handleAddSelectedExercises,
     muscleFilters,
