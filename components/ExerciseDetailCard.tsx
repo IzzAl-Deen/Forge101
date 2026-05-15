@@ -1,16 +1,17 @@
 import { ExerciseFormItem } from "@/hooks/use-exercise-details";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
-interface ExerciseDetailCardProps {
+interface Props {
   item: ExerciseFormItem;
   onUpdateItem: (
     exerciseId: number,
@@ -23,10 +24,17 @@ interface ExerciseDetailCardProps {
 
 export function ExerciseDetailCard({
   item,
-  onUpdateItem,
   onToggleDay,
+  onUpdateItem,
   weekDays,
-}: ExerciseDetailCardProps) {
+}: Props) {
+  const { control } = useForm({
+    defaultValues: {
+      sets: item.sets,
+      reps: item.reps,
+    },
+  });
+
   return (
     <View style={styles.card}>
       {item.image_url ? (
@@ -43,48 +51,67 @@ export function ExerciseDetailCard({
             .replace(/_/g, " ")
             .toUpperCase()}
         </Text>
+
         <Text style={styles.cardTitle}>{item.name}</Text>
 
+        {/* SETS */}
         <View style={styles.fieldGroup}>
           <Text style={styles.fieldLabel}>SETS</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={item.sets}
-            onChangeText={(value) =>
-              onUpdateItem(item.exercise_id, "sets", value)
-            }
+          <Controller
+            control={control}
+            name="sets"
+            render={({ field }) => (
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={field.value}
+                onChangeText={(value) => {
+                  field.onChange(value);
+                  onUpdateItem(item.exercise_id, "sets", value);
+                }}
+              />
+            )}
           />
         </View>
 
+        {/* REPS */}
         <View style={styles.fieldGroup}>
           <Text style={styles.fieldLabel}>REPS</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={item.reps}
-            onChangeText={(value) =>
-              onUpdateItem(item.exercise_id, "reps", value)
-            }
+          <Controller
+            control={control}
+            name="reps"
+            render={({ field }) => (
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={field.value}
+                onChangeText={(value) => {
+                  field.onChange(value);
+                  onUpdateItem(item.exercise_id, "reps", value);
+                }}
+              />
+            )}
           />
         </View>
 
+        {/* DAYS */}
         <View style={styles.fieldGroup}>
           <Text style={styles.fieldLabel}>DAY</Text>
+
           <View style={styles.daysRow}>
             {weekDays.map((day) => {
-              const isSelected = item.day.includes(day);
+              const active = item.day.includes(day);
 
               return (
                 <Pressable
                   key={day}
-                  style={[styles.dayChip, isSelected && styles.dayChipSelected]}
                   onPress={() => onToggleDay(item.exercise_id, day)}
+                  style={[styles.dayChip, active && styles.dayChipSelected]}
                 >
                   <Text
                     style={[
                       styles.dayChipText,
-                      isSelected && styles.dayChipTextSelected,
+                      active && styles.dayChipTextSelected,
                     ]}
                   >
                     {day.slice(0, 3).toUpperCase()}
