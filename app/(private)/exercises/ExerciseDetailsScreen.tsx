@@ -53,6 +53,7 @@ export default function ExerciseDetailsScreen() {
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            extraData={items}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>No exercises selected</Text>
