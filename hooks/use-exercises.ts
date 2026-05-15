@@ -1,65 +1,67 @@
-import { supabase } from "../lib/supabase";
-import { useState, useEffect, useCallback } from "react";
-import type { Exercise, ExerciseFilters } from "../types/exercise";
+import { supabase } from "@/lib/supabase";
+import type { Exercise, ExerciseFilters } from "@/types/exercise";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 const PAGE_SIZE = 10;
 
-export function useExercises(search: string, filters: ExerciseFilters) {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+type FetchParams = {
+  pageParam: number;
+  search: string;
+  filters: ExerciseFilters;
+};
 
-  const fetchExercises = useCallback(async (reset = false) => {
-    const currentPage = reset ? 0 : page;
-    if (!reset && !hasMore) return;
+async function fetchExercises({ pageParam, search, filters }: FetchParams) {
+  const from = pageParam * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const searchText = search.trim();
 
-    reset ? setLoading(true) : setLoadingMore(true);
+  let query = supabase.from("exercises").select("*").range(from, to);
 
-    let query = supabase
-      .from("exercises")
-      .select("*")
-      .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+  if (searchText) {
+    query = query.or(`name.ilike.%${searchText}%,description.ilike.%${searchText}%`);
+  }
 
-    if (search.trim()) {
-      query = query.or(
-        `name.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`
-      );
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      query = query.ilike(key, `%${value}%`);
     }
-    if (filters.target_muscle) {
-      query = query.ilike("target_muscle", `%${filters.target_muscle}%`);
-    }
-    if (filters.difficulty) {
-      query = query.ilike("difficulty", `%${filters.difficulty}%`);
-    }
-    if (filters.category) {
-      query = query.ilike("category", `%${filters.category}%`);
-    }
+  });
 
   const { data, error } = await query.returns<Exercise[]>();
 
-    if (!error && data) {
-      if (reset) {
-        setExercises(data);
-        setPage(1);
-      } else {
-        setExercises((prev) => [...prev, ...data]);
-        setPage((p) => p + 1);
-      }
-      setHasMore(data.length === PAGE_SIZE);
-    }
+  if (error) {
+    throw new Error(error.message);
+  }
 
-    reset ? setLoading(false) : setLoadingMore(false);
-  }, [search, filters, page, hasMore]);
+  return data ?? [];
+}
 
-  useEffect(() => {
-    fetchExercises(true);
-  }, [search, filters]);
+export function useExercises(search: string, filters: ExerciseFilters) {
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["exercises", search, filters],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => fetchExercises({ pageParam, search, filters }),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length : undefined,
+  });
 
-  const loadMore = () => {
-    if (!loadingMore && hasMore) fetchExercises(false);
+  return {
+    exercises: data?.pages.flat() ?? [],
+    loading: isLoading,
+    loadingMore: isFetchingNextPage,
+    isError,
+    error,
+    refetch,
+    loadMore: fetchNextPage,
+    hasMore: hasNextPage,
   };
-
-  return { exercises, loading, loadingMore, hasMore, loadMore };
 }

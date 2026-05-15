@@ -1,8 +1,11 @@
+import { useSelectedExercises } from "@/contexts/SelectedExercisesContext";
+import { useExercise } from "@/hooks/use-exercise";
+import { DIFFICULTY_COLORS } from "@/types/exercise";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -11,36 +14,54 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { supabase } from "@/lib/supabase";
-import type { Exercise } from "@/types/exercise";
-import { DIFFICULTY_COLORS } from "@/types/exercise";
 
 export default function ExerciseDetailsScreen() {
-  const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { id } = useLocalSearchParams<{ id?: string }>();
 
-  useEffect(() => {
-    const fetchExercise = async () => {
-      const { data, error } = await supabase
-        .from("exercises")
-        .select("*")
-        .eq("id", id)
-        .single();
+  const {
+    data: exercise,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useExercise(id);
 
-      if (!error && data) setExercise(data);
-      setLoading(false);
-    };
+  const { addExercise, removeExercise, isSelected } = useSelectedExercises();
 
-    fetchExercise();
-  }, [id]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#C8FF00" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>EXERCISE DETAILS</Text>
+
+          <View style={styles.headerSpace} />
+        </View>
+
+        <View style={styles.centered}>
+          <Ionicons name="warning-outline" size={46} color="#C8FF00" />
+
+          <Text style={styles.errorText}>
+            {error instanceof Error ? error.message : "Failed to load exercise"}
+          </Text>
+
+          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -59,21 +80,35 @@ export default function ExerciseDetailsScreen() {
   const difficultyColor =
     DIFFICULTY_COLORS[exercise.difficulty?.toLowerCase()] ?? "#888";
 
+  const selected = isSelected(exercise.id);
+
+  const handlePlanPress = async () => {
+    try {
+      if (selected) {
+        await removeExercise(exercise.id);
+      } else {
+        await addExercise(exercise);
+      }
+
+      Alert.alert("Done", "Plan updated");
+    } catch {
+      Alert.alert("Error", "Try again");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>EXERCISE DETAILS</Text>
-        <TouchableOpacity style={styles.moreBtn}>
-          <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-        </TouchableOpacity>
+
+        <View style={styles.headerSpace} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero Image */}
         <View style={styles.heroContainer}>
           {exercise.image_url ? (
             <Image
@@ -83,26 +118,27 @@ export default function ExerciseDetailsScreen() {
             />
           ) : (
             <View style={styles.heroPlaceholder}>
-              <Ionicons name="barbell-outline" size={80} color="#333" />
+              <Ionicons name="barbell-outline" size={76} color="#333" />
             </View>
           )}
+
           <View style={styles.heroOverlay} />
+
           <View style={styles.heroContent}>
-            <View style={styles.focusBadge}>
-              <Ionicons name="flash" size={10} color="#000" />
-              <Text style={styles.focusBadgeText}>STRENGTH FOCUS</Text>
-            </View>
-            <Text style={styles.exerciseName}>{exercise.name.toUpperCase()}</Text>
+            <Text style={styles.exerciseName}>
+              {exercise.name.toUpperCase()}
+            </Text>
           </View>
         </View>
 
-        {/* Target Muscle + Difficulty */}
         <View style={styles.infoRow}>
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>TARGET MUSCLE</Text>
             <Text style={styles.infoValue}>{exercise.target_muscle}</Text>
           </View>
+
           <View style={styles.infoDivider} />
+
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>DIFFICULTY</Text>
             <Text style={[styles.infoValue, { color: difficultyColor }]}>
@@ -111,35 +147,37 @@ export default function ExerciseDetailsScreen() {
           </View>
         </View>
 
-        {/* Overview */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>OVERVIEW</Text>
-          <View style={styles.overviewCard}>
-            <Text style={styles.overviewText}>{exercise.description}</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.description}>
+              {exercise.description || "No description available."}
+            </Text>
           </View>
         </View>
 
-        {/* Muscle Activation */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MUSCLE ACTIVATION</Text>
-          <View style={styles.muscleCard}>
-            <Text style={styles.muscleName}>{exercise.target_muscle}</Text>
-            <Text style={styles.muscleRole}>Primary Driver</Text>
+          <Text style={styles.sectionTitle}>CATEGORY</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.categoryText}>
+              {exercise.category || "General"}
+            </Text>
           </View>
-          {exercise.category ? (
-            <View style={styles.muscleCard}>
-              <Text style={styles.muscleName}>{exercise.category}</Text>
-              <Text style={styles.muscleRole}>Secondary Support</Text>
-            </View>
-          ) : null}
         </View>
 
-        {/* Add to Plan Button */}
-        <TouchableOpacity style={styles.addBtn}>
-          <Text style={styles.addBtnText}>ADD TO PLAN</Text>
-          <Ionicons name="add-circle-outline" size={20} color="#000" />
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.addBtn} onPress={handlePlanPress}>
+          <Text style={styles.addBtnText}>
+            {selected ? "REMOVE FROM PLAN" : "ADD TO PLAN"}
+          </Text>
 
+          <Ionicons
+            name={selected ? "checkmark-circle-outline" : "add-circle-outline"}
+            size={20}
+            color="#000"
+          />
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -154,10 +192,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 12,
   },
   errorText: {
-    color: "#444",
+    color: "#777",
     fontSize: 15,
+    textAlign: "center",
+  },
+  retryBtn: {
+    backgroundColor: "#C8FF00",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryText: {
+    color: "#000",
+    fontWeight: "800",
   },
   header: {
     flexDirection: "row",
@@ -177,11 +228,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2,
   },
-  moreBtn: {
-    padding: 4,
+  headerSpace: {
+    width: 30,
   },
   heroContainer: {
-    height: 300,
+    height: 290,
     backgroundColor: "#141414",
   },
   heroImage: {
@@ -198,33 +249,17 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   heroContent: {
     position: "absolute",
-    bottom: 20,
+    bottom: 22,
     left: 16,
-  },
-  focusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#C8FF00",
-    alignSelf: "flex-start",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 4,
-    marginBottom: 8,
-  },
-  focusBadgeText: {
-    color: "#000",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 1,
+    right: 16,
   },
   exerciseName: {
     color: "#fff",
-    fontSize: 32,
+    fontSize: 31,
     fontWeight: "900",
     letterSpacing: 1,
     lineHeight: 36,
@@ -258,11 +293,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+    textTransform: "capitalize",
   },
   section: {
     marginHorizontal: 16,
-    marginTop: 24,
-    gap: 12,
+    marginTop: 22,
+    gap: 10,
   },
   sectionTitle: {
     color: "#fff",
@@ -270,35 +306,23 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2,
   },
-  overviewCard: {
+  card: {
     backgroundColor: "#141414",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: "#1E1E1E",
   },
-  overviewText: {
+  description: {
     color: "#aaa",
     fontSize: 14,
     lineHeight: 22,
   },
-  muscleCard: {
-    backgroundColor: "#141414",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#1E1E1E",
-    marginBottom: 8,
-  },
-  muscleName: {
+  categoryText: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "700",
-  },
-  muscleRole: {
-    color: "#555",
-    fontSize: 12,
-    marginTop: 4,
+    textTransform: "capitalize",
   },
   addBtn: {
     flexDirection: "row",
