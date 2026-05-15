@@ -1,4 +1,4 @@
-import {View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator} from 'react-native';
+import {View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator, Alert} from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
@@ -55,29 +55,31 @@ const PlanBuilderScreen = () => {
         }
       }, [id, refetchPlan, refetchExercises])
   );
-
   const deleteMutation = useMutation({
-    mutationFn: async (originalIds: number[]) => {
-
-      const requests = originalIds.map((pivotId) =>
-          myPlansService.detachExercise(id!, pivotId)
-      );
-
-      return Promise.all(requests);
-    },
-
+    mutationFn: (exerciseId: number) => myPlansService.detachExercise(id!, exerciseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planExercises', id] });
       queryClient.invalidateQueries({ queryKey: ['plan', id] });
     },
-
     onError: (error: any) => {
       console.error('Delete failed:', error);
+      Alert.alert("Error", "Failed to delete exercise");
     }
   });
 
-  const handleRemove = (originalIds: number[]) => {
-    deleteMutation.mutate(originalIds);
+  const handleRemove = (exerciseId: number) => {
+    Alert.alert(
+        "Delete Exercise",
+        "Are you sure?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => deleteMutation.mutate(exerciseId)
+          }
+        ]
+    );
   };
 
   return (
@@ -113,7 +115,7 @@ const PlanBuilderScreen = () => {
                       <ExerciseCard
                           item={item}
                           index={index}
-                          onDelete={() => handleRemove(item.originalIds)}
+                          onDelete={() => handleRemove(item.id)}
                       />
                   )}
                   keyExtractor={(item, index) => item?.id ? item.id.toString() : `ex-${index}`}

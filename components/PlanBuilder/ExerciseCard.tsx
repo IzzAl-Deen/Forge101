@@ -3,7 +3,6 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { PlanExercise } from "@/api/MyPlansService";
 import { randomExerciseImages } from "@/constants/PlanBuilderImages";
-import {router} from "expo-router";
 
 interface ExerciseCardProps {
     item: PlanExercise;
