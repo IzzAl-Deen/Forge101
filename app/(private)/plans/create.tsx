@@ -1,10 +1,7 @@
-import  { useState, useEffect } from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-import * as FileSystem from 'expo-file-system/legacy';
 
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
@@ -13,109 +10,105 @@ import { supabase } from "@/lib/supabase";
 import Plans from "@/api/plansApi";
 import { PendingExercise } from "@/components/plan-exercises";
 
-const IMAGE_STORAGE_KEY = "PlanForm.selectedImage";
-const FORM_DATA_KEY = "PlanForm.data";
-
-const base64ToArrayBuffer = (base64: string) => {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-};
-
 export default function CreatePlanScreen() {
+  const queryClient = useQueryClient();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const queryClient = useQueryClient();
   useSelectedExercises(setExercises);
-
-  useEffect(() => {
-    AsyncStorage.getItem(IMAGE_STORAGE_KEY)
-        .then((savedImage) => {
-          if (savedImage) setSelectedImage(savedImage);
-        })
-        .catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (selectedImage) {
-      AsyncStorage.setItem(IMAGE_STORAGE_KEY, selectedImage).catch(console.error);
-    } else {
-      AsyncStorage.removeItem(IMAGE_STORAGE_KEY).catch(console.error);
-    }
-  }, [selectedImage]);
-
-  const createPlanMutation = useMutation({
-    mutationFn: async (data: any) => {
-      let finalImageUrl = null;
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Not authenticated");
-
-      if (selectedImage) {
-        const fileExt = selectedImage.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `plans/${fileName}`;
-
-        const base64 = await FileSystem.readAsStringAsync(selectedImage, {
-          encoding: 'base64' as any,
-        });
-
-        const arrayBuffer = base64ToArrayBuffer(base64);
-
-        const { error: uploadError } = await supabase.storage
-            .from('plans')
-            .upload(filePath, arrayBuffer, {
-              contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
-              upsert: true
-            });
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage
-            .from('plans')
-            .getPublicUrl(filePath);
-
-        finalImageUrl = publicUrlData.publicUrl;
-      }
-
-      return Plans.create({
-        name: data.name,
-        difficulty: data.difficulty,
-        duration_minutes: parseInt(data.duration_minutes),
-        image_url: finalImageUrl,
-        user_id: session.user.id,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
-      setModalVisible(true);
-      setSelectedImage(null);
-      AsyncStorage.removeItem(IMAGE_STORAGE_KEY);
-      AsyncStorage.removeItem(FORM_DATA_KEY);
-    },
-    onError: (error: any) => {
-      console.error("Creation Error:", error);
-      Alert.alert("Error", error.message || "Failed to create plan");
-    }
-  });
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [16, 9],
-      quality: 0.8,
+      quality: 0.85,
     });
 
     if (!result.canceled) {
       setSelectedImage(result.assets[0].uri);
     }
   };
+
+  const createPlanMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
+
+      let imageUrl: string | null = null;
+
+      // رفع الصورة
+      if (selectedImage) {
+        const fileExt = selectedImage.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const filePath = `plans/${fileName}`;
+
+        const response = await fetch(selectedImage);
+        const blob = await response.blob();
+
+        const { error: uploadError } = await supabase.storage
+            .from('plans')
+            .upload(filePath, blob, {
+              contentType: `image/${fileExt}`,
+              upsert: true,
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrl } = supabase.storage
+            .from('plans')
+            .getPublicUrl(filePath);
+
+        imageUrl = publicUrl.publicUrl;
+      }
+
+      // 1. إنشاء الـ Plan
+      const createdPlan = await Plans.create({
+        name: data.name,
+        difficulty: data.difficulty,
+        duration_minutes: parseInt(data.duration_minutes),
+        image_url: imageUrl,
+        user_id: session.user.id,
+      });
+
+      const planId = createdPlan.id || createdPlan.plan?.id || createdPlan.data?.id;
+
+      if (!planId) throw new Error("Failed to get plan ID");
+
+      // 2. إضافة التمارين (نفس طريقة الـ Edit)
+      let orderIndex = 1;
+
+      for (const exercise of exercises) {
+        const days = exercise.day?.length > 0 ? exercise.day : ["monday"];
+
+        for (const day of days) {
+          await Plans.attachExercise(planId, {
+            exercise_id: exercise.exercise_id,
+            sets: Number(exercise.sets) || 0,
+            reps: Number(exercise.reps) || 0,
+            day: day,
+            order_index: orderIndex++,
+          });
+        }
+      }
+
+      return createdPlan;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      setModalVisible(true);
+      setSelectedImage(null);
+    },
+
+    onError: (error: any) => {
+      console.error(error);
+      Alert.alert("Error", error?.message || "Failed to create plan");
+    }
+  });
 
   return (
       <ScrollView contentContainerStyle={styles.container}>

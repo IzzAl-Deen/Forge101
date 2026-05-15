@@ -11,11 +11,9 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet } from "react-native";
 export default function EditPlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
-
   const [isSaving, setIsSaving] = useState(false);
 
   const { id } = useLocalSearchParams();
-
   const [plan, setPlan] = useState<Omit<Plan, "user_id"> | null>(null);
 
   const loadPlan = useCallback(async () => {
@@ -39,52 +37,55 @@ export default function EditPlanScreen() {
 
   useEffect(() => {
     AsyncStorage.getItem("selectedExercises")
-      .then((saved) => {
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (exercises.length === 0) {
-            Plans.getExercises(Number(id))
-              .then((exercisesData) => {
-                const oldExercises = exercisesData.exercises.map((ex: any) => ({
-                  exercise_id: ex.id,
-                  name: ex.name,
-                  sets: String(ex.pivot?.sets || ""),
-                  reps: String(ex.pivot?.reps || ""),
-                  day: ex.pivot?.day ? [ex.pivot.day] : [],
-                }));
-                setExercises([...oldExercises, ...parsed]);
-                AsyncStorage.removeItem("selectedExercises").catch(
-                  console.error,
+        .then((saved) => {
+          const parsed = saved ? JSON.parse(saved) : null;
+
+          Plans.getExercises(Number(id))
+              .then((res) => {
+
+                const groupedExercises = res.exercises.reduce(
+                    (acc: any[], ex: any) => {
+
+                      const key = `${ex.id}-${ex.pivot?.sets}-${ex.pivot?.reps}`;
+
+                      const existing = acc.find((item) => item.key === key);
+
+                      if (existing) {
+                        const day = ex.pivot?.day;
+
+                        if (day && !existing.day.includes(day)) {
+                          existing.day.push(day);
+                        }
+
+                      } else {
+                        acc.push({
+                          key,
+                          exercise_id: ex.id,
+                          name: ex.name,
+                          sets: String(ex.pivot?.sets || ""),
+                          reps: String(ex.pivot?.reps || ""),
+                          day: ex.pivot?.day ? [ex.pivot.day] : [],
+                        });
+                      }
+
+                      return acc;
+                    },
+                    []
                 );
+
+                if (parsed) {
+                  setExercises([...groupedExercises, ...parsed]);
+                  AsyncStorage.removeItem("selectedExercises");
+                } else {
+                  setExercises(groupedExercises);
+                }
               })
               .catch((err) => {
                 console.error(err);
                 Alert.alert("Error", "Failed loading exercises");
               });
-          } else {
-            setExercises((prev) => [...prev, ...parsed]);
-            AsyncStorage.removeItem("selectedExercises").catch(console.error);
-          }
-        } else if (exercises.length === 0) {
-          Plans.getExercises(Number(id))
-            .then((exercisesData) => {
-              setExercises(
-                exercisesData.exercises.map((ex: any) => ({
-                  exercise_id: ex.id,
-                  name: ex.name,
-                  sets: String(ex.pivot?.sets || ""),
-                  reps: String(ex.pivot?.reps || ""),
-                  day: ex.pivot?.day ? [ex.pivot.day] : [],
-                })),
-              );
-            })
-            .catch((err) => {
-              console.error(err);
-              Alert.alert("Error", "Failed loading exercises");
-            });
-        }
-      })
-      .catch(console.error);
+        })
+        .catch(console.error);
   }, [id]);
 
   const handleUpdate = async (updated: Omit<Plan, "user_id">) => {
@@ -94,32 +95,37 @@ export default function EditPlanScreen() {
     try {
       await Plans.update(Number(id), updated as Plan);
 
-      let orderIndex = 1;
       const existing = await Plans.getExercises(Number(id));
+
       await Promise.all(
-        existing.exercises.map((ex: any) =>
-          Plans.deleteExercise(Number(id), ex.id),
-        ),
+          existing.exercises.map((ex: any) =>
+              Plans.deleteExercise(Number(id), ex.id)
+          )
       );
 
+      let orderIndex = 1;
+
       const requests = exercises.flatMap((exercise) => {
-        const days = exercise.day.length > 0 ? exercise.day : ["monday"];
+        const days = exercise.day.length ? exercise.day : ["monday"];
 
         return days.map((day) =>
-          Plans.attachExercise(Number(id), {
-            exercise_id: exercise.exercise_id,
-            sets: Number(exercise.sets) || 0,
-            reps: Number(exercise.reps) || 0,
-            day,
-            order_index: orderIndex++,
-          }),
+            Plans.attachExercise(Number(id), {
+              exercise_id: exercise.exercise_id,
+              sets: Number(exercise.sets) || 0,
+              reps: Number(exercise.reps) || 0,
+              day,
+              order_index: orderIndex++,
+            })
         );
       });
 
       await Promise.all(requests);
+
       setModalVisible(true);
-      AsyncStorage.removeItem("ExercisesScreen.navData").catch(console.error);
-      AsyncStorage.removeItem("PlanForm.data").catch(console.error);
+
+      AsyncStorage.removeItem("ExercisesScreen.navData");
+      AsyncStorage.removeItem("PlanForm.data");
+
     } catch (err) {
       console.error(err);
       Alert.alert("Update failed");
@@ -138,27 +144,33 @@ export default function EditPlanScreen() {
     }
   };
 
-
-
-  if (!plan) return <ActivityIndicator size={32} color={"#ccff00"} style={styles.container}/>;
+  if (!plan)
+    return (
+        <ActivityIndicator
+            size={32}
+            color={"#ccff00"}
+            style={styles.container}
+        />
+    );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <PlanForm
-        initialValues={plan}
-        planId={Number(id)}
-        exercises={exercises}
-        submitLabel={isSaving ? "UPDATING..." : "UPDATE PLAN"}
-        onSubmit={handleUpdate}
-        onExercisesChange={setExercises}
-        onDelete={handleDelete}
-      />
-      <SuccessModal
-        visible={modalVisible}
-        message="Success!"
-        onClose={() => setModalVisible(false)}
-      />
-    </ScrollView>
+      <ScrollView contentContainerStyle={styles.container}>
+        <PlanForm
+            initialValues={plan}
+            planId={Number(id)}
+            exercises={exercises}
+            submitLabel={isSaving ? "UPDATING..." : "UPDATE PLAN"}
+            onSubmit={handleUpdate}
+            onExercisesChange={setExercises}
+            onDelete={handleDelete}
+        />
+
+        <SuccessModal
+            visible={modalVisible}
+            message="Success!"
+            onClose={() => setModalVisible(false)}
+        />
+      </ScrollView>
   );
 }
 
@@ -167,11 +179,5 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: "#121212",
     padding: 24,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 32,
   },
 });

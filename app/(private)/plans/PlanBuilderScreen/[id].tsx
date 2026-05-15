@@ -57,18 +57,27 @@ const PlanBuilderScreen = () => {
   );
 
   const deleteMutation = useMutation({
-    mutationFn: (exerciseId: number) => myPlansService.detachExercise(id!, exerciseId),
+    mutationFn: async (originalIds: number[]) => {
+
+      const requests = originalIds.map((pivotId) =>
+          myPlansService.detachExercise(id!, pivotId)
+      );
+
+      return Promise.all(requests);
+    },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planExercises', id] });
       queryClient.invalidateQueries({ queryKey: ['plan', id] });
     },
+
     onError: (error: any) => {
       console.error('Delete failed:', error);
     }
   });
 
-  const handleRemove = (exerciseId: number) => {
-    deleteMutation.mutate(exerciseId);
+  const handleRemove = (originalIds: number[]) => {
+    deleteMutation.mutate(originalIds);
   };
 
   return (
@@ -89,7 +98,7 @@ const PlanBuilderScreen = () => {
             <AddButton
                 title="ADD EXERCISE"
                 route={{
-                  pathname: '/(private)/plans/edit/[id]',
+                  pathname: '/plans/edit/[id]',
                   params: { id: id }
                 }}
             />
@@ -104,7 +113,7 @@ const PlanBuilderScreen = () => {
                       <ExerciseCard
                           item={item}
                           index={index}
-                          onDelete={handleRemove}
+                          onDelete={() => handleRemove(item.originalIds)}
                       />
                   )}
                   keyExtractor={(item, index) => item?.id ? item.id.toString() : `ex-${index}`}
