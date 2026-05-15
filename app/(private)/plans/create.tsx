@@ -1,11 +1,9 @@
-import  { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import * as FileSystem from 'expo-file-system/legacy';
-
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
 import useSelectedExercises from "@/hooks/use-selected-exercises";
@@ -26,11 +24,11 @@ const base64ToArrayBuffer = (base64: string) => {
 };
 
 export default function CreatePlanScreen() {
+  const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const queryClient = useQueryClient();
   useSelectedExercises(setExercises);
 
   useEffect(() => {
@@ -49,14 +47,30 @@ export default function CreatePlanScreen() {
     }
   }, [selectedImage]);
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+    }
+  };
+
   const createPlanMutation = useMutation({
     mutationFn: async (data: any) => {
-      let finalImageUrl = null;
+      console.log("Step 1: start");
 
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("Step 2: session", session?.user?.id);
       if (!session?.user) throw new Error("Not authenticated");
 
+      let finalImageUrl: string | null = null;
+
       if (selectedImage) {
+        console.log("Step 3: uploading image");
         const fileExt = selectedImage.split('.').pop()?.toLowerCase() || 'jpg';
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `plans/${fileName}`;
@@ -71,7 +85,7 @@ export default function CreatePlanScreen() {
             .from('plans')
             .upload(filePath, arrayBuffer, {
               contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
-              upsert: true
+              upsert: true,
             });
 
         if (uploadError) throw uploadError;
@@ -81,41 +95,55 @@ export default function CreatePlanScreen() {
             .getPublicUrl(filePath);
 
         finalImageUrl = publicUrlData.publicUrl;
+        console.log("Step 4: image uploaded", finalImageUrl);
       }
 
-      return Plans.create({
+      console.log("Step 5: creating plan");
+      const createdPlan = await Plans.create({
         name: data.name,
         difficulty: data.difficulty,
         duration_minutes: parseInt(data.duration_minutes),
         image_url: finalImageUrl,
         user_id: session.user.id,
+        created_by_user_id: session.user.id,
       });
+      console.log("Step 6: plan created", createdPlan);
+
+      const planId = createdPlan.id || createdPlan.plan?.id || createdPlan.data?.id;
+      if (!planId) throw new Error("Failed to get plan ID");
+
+      console.log("Step 7: attaching exercises", exercises.length);
+      let orderIndex = 1;
+      for (const exercise of exercises) {
+        const days = exercise.day?.length > 0 ? exercise.day : ["monday"];
+        for (const day of days) {
+          await Plans.attachExercise(planId, {
+            exercise_id: exercise.exercise_id,
+            sets: Number(exercise.sets) || 0,
+            reps: Number(exercise.reps) || 0,
+            day: day,
+            order_index: orderIndex++,
+          });
+        }
+      }
+      console.log("Step 8: done");
+
+      return createdPlan;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] });
       setModalVisible(true);
       setSelectedImage(null);
-      AsyncStorage.removeItem(IMAGE_STORAGE_KEY);
-      AsyncStorage.removeItem(FORM_DATA_KEY);
+      AsyncStorage.removeItem(IMAGE_STORAGE_KEY).catch(console.error);
+      AsyncStorage.removeItem(FORM_DATA_KEY).catch(console.error);
     },
     onError: (error: any) => {
-      console.error("Creation Error:", error);
-      Alert.alert("Error", error.message || "Failed to create plan");
+      console.error("message:", error?.message);
+      console.error("status:", error?.response?.status);
+      console.error("data:", error?.response?.data);
+      Alert.alert("Error", error?.message || "Failed to create plan");
     }
   });
-
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-    }
-  };
 
   return (
       <ScrollView contentContainerStyle={styles.container}>
@@ -128,7 +156,6 @@ export default function CreatePlanScreen() {
             selectedImage={selectedImage}
             onPickImage={pickImage}
         />
-
         <SuccessModal
             visible={modalVisible}
             message="Plan created successfully!"

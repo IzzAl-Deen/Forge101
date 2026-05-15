@@ -1,4 +1,4 @@
-import {View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator} from 'react-native';
+import {View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator, Alert} from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
@@ -55,7 +55,6 @@ const PlanBuilderScreen = () => {
         }
       }, [id, refetchPlan, refetchExercises])
   );
-
   const deleteMutation = useMutation({
     mutationFn: (exerciseId: number) => myPlansService.detachExercise(id!, exerciseId),
     onSuccess: () => {
@@ -64,11 +63,23 @@ const PlanBuilderScreen = () => {
     },
     onError: (error: any) => {
       console.error('Delete failed:', error);
+      Alert.alert("Error", "Failed to delete exercise");
     }
   });
 
   const handleRemove = (exerciseId: number) => {
-    deleteMutation.mutate(exerciseId);
+    Alert.alert(
+        "Delete Exercise",
+        "Are you sure?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => deleteMutation.mutate(exerciseId)
+          }
+        ]
+    );
   };
 
   return (
@@ -89,7 +100,7 @@ const PlanBuilderScreen = () => {
             <AddButton
                 title="ADD EXERCISE"
                 route={{
-                  pathname: '/(private)/plans/edit/[id]',
+                  pathname: '/plans/edit/[id]',
                   params: { id: id }
                 }}
             />
@@ -104,7 +115,7 @@ const PlanBuilderScreen = () => {
                       <ExerciseCard
                           item={item}
                           index={index}
-                          onDelete={handleRemove}
+                          onDelete={() => handleRemove(item.id)}
                       />
                   )}
                   keyExtractor={(item, index) => item?.id ? item.id.toString() : `ex-${index}`}
