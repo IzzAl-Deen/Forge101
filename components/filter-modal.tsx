@@ -21,7 +21,7 @@ type Props = {
   options: string[];
 };
 
-type FilterForm = {
+type FormValues = {
   selected: string | null;
 };
 
@@ -33,35 +33,26 @@ export const FilterModal = ({
   filterType,
   options,
 }: Props) => {
-  const { control, handleSubmit, reset } = useForm<FilterForm>({
-    defaultValues: {
-      selected: filters[filterType],
-    },
+  const { control, handleSubmit, reset } = useForm<FormValues>({
+    defaultValues: { selected: filters[filterType] },
   });
 
   useEffect(() => {
-    reset({
-      selected: filters[filterType],
-    });
+    reset({ selected: filters[filterType] });
   }, [filters, filterType, reset]);
 
   const title =
-    filterType === "target_muscle"
-      ? "TARGET MUSCLE"
-      : filterType.toUpperCase();
+    filterType === "target_muscle" ? "TARGET MUSCLE" : filterType.toUpperCase();
 
-  const applyFilter = ({ selected }: FilterForm) => {
-    onApply({
-      ...filters,
-      [filterType]: selected,
-    });
+  const applyFilter = ({ selected }: FormValues) => {
+    onApply({ ...filters, [filterType]: selected });
     onClose();
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.container} onPress={() => {}}>
+        <Pressable style={styles.container}>
           <View style={styles.handle} />
           <Text style={styles.title}>{title}</Text>
 
@@ -70,47 +61,31 @@ export const FilterModal = ({
             name="selected"
             render={({ field: { value, onChange } }) => (
               <ScrollView style={styles.optionsList}>
-                <TouchableOpacity
-                  style={[styles.option, value === null && styles.optionActive]}
-                  onPress={() => onChange(null)}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      value === null && styles.optionTextActive,
-                    ]}
-                  >
-                    All
-                  </Text>
+                {[null, ...options].map((option) => {
+                  const active = value === option;
+                  const label = option ?? "All";
 
-                  {value === null && (
-                    <Ionicons name="checkmark" size={18} color="#C8FF00" />
-                  )}
-                </TouchableOpacity>
-
-                {options.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.option,
-                      value === option && styles.optionActive,
-                    ]}
-                    onPress={() => onChange(option)}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        value === option && styles.optionTextActive,
-                      ]}
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      style={[styles.option, active && styles.optionActive]}
+                      onPress={() => onChange(option)}
                     >
-                      {option}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.optionText,
+                          active && styles.optionTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
 
-                    {value === option && (
-                      <Ionicons name="checkmark" size={18} color="#C8FF00" />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                      {active && (
+                        <Ionicons name="checkmark" size={18} color="#C8FF00" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             )}
           />

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { Exercise } from "@/types/exercise";
 import React, {
   createContext,
   useCallback,
@@ -7,7 +8,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import type { Exercise } from "@/types/exercise";
 
 type SelectedExercisesContextType = {
   selectedExercises: Exercise[];
@@ -18,7 +18,6 @@ type SelectedExercisesContextType = {
 };
 
 const STORAGE_KEY = "selectedExercises";
-
 const SelectedExercisesContext =
   createContext<SelectedExercisesContextType | null>(null);
 
@@ -30,61 +29,42 @@ export function SelectedExercisesProvider({
   const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
 
   useEffect(() => {
-    async function loadSelectedExercises() {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-
-        if (saved) {
-          setSelectedExercises(JSON.parse(saved));
-        }
-      } catch (error) {
-        console.log("Failed to load selected exercises:", error);
-      }
-    }
-
-    loadSelectedExercises();
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((saved) => {
+        if (saved) setSelectedExercises(JSON.parse(saved));
+      })
+      .catch(() => {});
   }, []);
 
-  const saveSelectedExercises = useCallback(async (items: Exercise[]) => {
+  const saveExercises = useCallback(async (items: Exercise[]) => {
     setSelectedExercises(items);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, []);
 
   const addExercise = useCallback(
     async (exercise: Exercise) => {
-      const alreadySelected = selectedExercises.some(
-        (item) => item.id === exercise.id,
-      );
-
-      if (alreadySelected) {
-        return;
-      }
-
-      const updatedItems = [...selectedExercises, exercise];
-      await saveSelectedExercises(updatedItems);
+      if (selectedExercises.some((item) => item.id === exercise.id)) return;
+      await saveExercises([...selectedExercises, exercise]);
     },
-    [selectedExercises, saveSelectedExercises],
+    [selectedExercises, saveExercises],
   );
 
   const removeExercise = useCallback(
     async (exerciseId: number) => {
-      const updatedItems = selectedExercises.filter(
-        (item) => item.id !== exerciseId,
+      await saveExercises(
+        selectedExercises.filter((item) => item.id !== exerciseId),
       );
-
-      await saveSelectedExercises(updatedItems);
     },
-    [selectedExercises, saveSelectedExercises],
+    [selectedExercises, saveExercises],
   );
 
-  const clearSelectedExercises = useCallback(async () => {
-    await saveSelectedExercises([]);
-  }, [saveSelectedExercises]);
+  const clearSelectedExercises = useCallback(() => {
+    return saveExercises([]);
+  }, [saveExercises]);
 
   const isSelected = useCallback(
-    (exerciseId: number) => {
-      return selectedExercises.some((item) => item.id === exerciseId);
-    },
+    (exerciseId: number) =>
+      selectedExercises.some((item) => item.id === exerciseId),
     [selectedExercises],
   );
 
@@ -116,9 +96,7 @@ export function useSelectedExercises() {
   const context = useContext(SelectedExercisesContext);
 
   if (!context) {
-    throw new Error(
-      "useSelectedExercises must be used inside SelectedExercisesProvider",
-    );
+    throw new Error("SelectedExercisesProvider is missing");
   }
 
   return context;
