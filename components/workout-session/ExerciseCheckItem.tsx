@@ -19,8 +19,8 @@ export const ExerciseCheckItem = memo(function ExerciseCheckItem({
       <View style={styles.info}>
         <Text style={styles.name}>{exercise.name}</Text>
         <Text style={styles.meta}>
-          {exercise.pivot?.sets || 0} SETS · {exercise.pivot?.reps || 0} REPS ·{" "}
-          {exercise.pivot?.day || "DAY"}
+          {exercise.pivot?.sets || 0} SETS · {exercise.pivot?.reps || 0} REPS {" "}
+          {/* {exercise.pivot?.day || "DAY"} */}
         </Text>
       </View>
 

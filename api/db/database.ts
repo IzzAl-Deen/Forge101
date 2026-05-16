@@ -3,9 +3,14 @@ import * as SQLite from "expo-sqlite";
 export const db = SQLite.openDatabaseSync("fitness.db");
 
 export const initDatabase = async () => {
-    try {
-        await db.execAsync(`
-            CREATE TABLE IF NOT EXISTS plans (
+  try {
+    // await db.execAsync(`
+    //         DROP TABLE IF EXISTS plans;
+    //         DROP TABLE IF EXISTS exercises;
+    //     `);
+
+    await db.execAsync(`
+            CREATE TABLE plans (
                 id INTEGER PRIMARY KEY NOT NULL,
                 name TEXT,
                 difficulty TEXT,
@@ -14,8 +19,8 @@ export const initDatabase = async () => {
             );
         `);
 
-        await db.execAsync(`
-            CREATE TABLE IF NOT EXISTS exercises (
+    await db.execAsync(`
+            CREATE TABLE exercises (
                 id INTEGER PRIMARY KEY NOT NULL,
                 name TEXT,
                 sets INTEGER,
@@ -26,8 +31,8 @@ export const initDatabase = async () => {
             );
         `);
 
-        console.log("Database initialized");
-    } catch (error) {
-        console.error("Database init failed", error);
-    }
+    console.log("Database initialized");
+  } catch (error) {
+    console.error("Database init failed", error);
+  }
 };

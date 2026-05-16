@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -23,20 +23,33 @@ function ScreenContent() {
   const { data, isLoading, isError, refetch } = useWorkoutSession(id);
   const { completeExercise, unsubscribe } = usePlanActions();
 
+  const [localCompleted, setLocalCompleted] = useState<number[]>([]);
+
   const planId = Number(id);
 
   const plan = data?.plan;
   const exercises = useMemo(
-  () => plan?.exercises || [],
-  [plan?.exercises]
+    () => plan?.exercises || [],
+    [plan?.exercises]
   );
 
   const completedIds = useMemo(() => {
     return data?.progress?.map((item: any) => item.exercise_id) || [];
   }, [data]);
 
+  const completedSet = useMemo(() => {
+    return new Set([
+      ...(data?.progress?.map((i: any) => i.exercise_id) || []),
+      ...localCompleted,
+    ]);
+  }, [data, localCompleted]);
+
   const handleComplete = useCallback(
     (exerciseId: number) => {
+      setLocalCompleted((prev) =>
+        prev.includes(exerciseId) ? prev : [...prev, exerciseId]
+      );
+
       completeExercise.mutate({
         userPlanId: planId,
         exerciseId,
@@ -44,6 +57,28 @@ function ScreenContent() {
     },
     [completeExercise, planId]
   );
+
+
+  const uniqueExercises = useMemo(() => {
+    const map = new Map<number, any>();
+
+    for (const ex of exercises) {
+      if (!map.has(ex.id)) {
+        map.set(ex.id, ex);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [exercises]);
+
+
+  const progressPercent = useMemo(() => {
+    const total = uniqueExercises.length || 1;
+    const done = completedSet.size;
+
+    return Math.round((done / total) * 100);
+  }, [uniqueExercises.length, completedSet]);
+
 
   if (isLoading) {
     return (
@@ -71,18 +106,18 @@ function ScreenContent() {
         <Text style={styles.small}>ACTIVE PLAN</Text>
         <Text style={styles.title}>{plan?.name}</Text>
 
-        <ProgressCard progress={data?.progress_percent || 0} />
+        <ProgressCard progress={progressPercent} />
 
         <View style={styles.row}>
           <Text style={styles.section}>EXERCISES IN THIS PLAN</Text>
-          <Text style={styles.remaining}>{exercises.length} REMAINING</Text>
+          <Text style={styles.remaining}>{uniqueExercises.length} REMAINING</Text>
         </View>
 
-        {exercises.map((exercise: any) => (
+        {uniqueExercises.map((exercise: any) => (
           <ExerciseCheckItem
-            key={`${exercise.id}-${exercise.pivot?.id ?? ""}-${exercise.pivot?.day ?? ""}-${Math.random()}`}
+            key={`${exercise.id}`}
             exercise={exercise}
-            checked={completedIds.includes(exercise.id)}
+            checked={completedSet.has(exercise.id)}
             onPress={handleComplete}
           />
         ))}
