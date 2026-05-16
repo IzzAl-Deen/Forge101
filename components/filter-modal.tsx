@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import {
   Modal,
   Pressable,
@@ -33,9 +33,11 @@ export const FilterModal = ({
   filterType,
   options,
 }: Props) => {
-  const { control, handleSubmit, reset } = useForm<FormValues>({
+  const { handleSubmit, setValue, watch, reset } = useForm<FormValues>({
     defaultValues: { selected: filters[filterType] },
   });
+
+  const selected = watch("selected");
 
   useEffect(() => {
     reset({ selected: filters[filterType] });
@@ -49,46 +51,52 @@ export const FilterModal = ({
     onClose();
   };
 
+  const values = [null, ...options];
+
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.container}>
+      <View style={styles.backdrop}>
+        <View style={styles.container}>
           <View style={styles.handle} />
-          <Text style={styles.title}>{title}</Text>
 
-          <Controller
-            control={control}
-            name="selected"
-            render={({ field: { value, onChange } }) => (
-              <ScrollView style={styles.optionsList}>
-                {[null, ...options].map((option) => {
-                  const active = value === option;
-                  const label = option ?? "All";
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
 
-                  return (
-                    <TouchableOpacity
-                      key={label}
-                      style={[styles.option, active && styles.optionActive]}
-                      onPress={() => onChange(option)}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          active && styles.optionTextActive,
-                        ]}
-                      >
-                        {label}
-                      </Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color="#aaa" />
+            </TouchableOpacity>
+          </View>
 
-                      {active && (
-                        <Ionicons name="checkmark" size={18} color="#C8FF00" />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
-          />
+          <ScrollView
+            style={styles.optionsList}
+            keyboardShouldPersistTaps="always"
+          >
+            {values.map((option) => {
+              const active = selected === option;
+              const label = option ?? "All";
+
+              return (
+                <Pressable
+                  key={label}
+                  style={[styles.option, active && styles.optionActive]}
+                  onPress={() => setValue("selected", option)}
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      active && styles.optionTextActive,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+
+                  {active && (
+                    <Ionicons name="checkmark" size={18} color="#C8FF00" />
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
           <TouchableOpacity
             style={styles.applyBtn}
@@ -96,8 +104,8 @@ export const FilterModal = ({
           >
             <Text style={styles.applyBtnText}>APPLY</Text>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -123,12 +131,17 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   title: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 2,
-    marginBottom: 16,
   },
   optionsList: {
     maxHeight: 320,

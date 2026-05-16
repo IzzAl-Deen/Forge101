@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import type { Exercise, ExerciseFilters } from "@/types/exercise";
+import Exercises from "@/api/exerciseApi";
+import type { ExerciseFilters } from "@/types/exercise";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 const PAGE_SIZE = 10;
@@ -10,30 +10,27 @@ type FetchParams = {
   filters: ExerciseFilters;
 };
 
+function cleanDifficulty(value: string | null) {
+  return value?.toLowerCase() as
+    | "beginner"
+    | "intermediate"
+    | "advanced"
+    | undefined;
+}
+
 async function fetchExercises({ pageParam, search, filters }: FetchParams) {
-  const from = pageParam * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  const searchText = search.trim();
+  const page = pageParam + 1;
 
-  let query = supabase.from("exercises").select("*").range(from, to);
-
-  if (searchText) {
-    query = query.or(`name.ilike.%${searchText}%,description.ilike.%${searchText}%`);
-  }
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      query = query.ilike(key, `%${value}%`);
-    }
+  const response = await Exercises.search({
+    q: search.trim() || undefined,
+    target_muscle: filters.target_muscle || undefined,
+    category: filters.category || undefined,
+    difficulty: cleanDifficulty(filters.difficulty),
+    page,
+    per_page: PAGE_SIZE,
   });
 
-  const { data, error } = await query.returns<Exercise[]>();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data ?? [];
+  return response.data;
 }
 
 export function useExercises(search: string, filters: ExerciseFilters) {
