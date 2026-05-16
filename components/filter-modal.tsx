@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import {
   Modal,
   Pressable,
@@ -20,6 +21,10 @@ type Props = {
   options: string[];
 };
 
+type FormValues = {
+  selected: string | null;
+};
+
 export const FilterModal = ({
   visible,
   onClose,
@@ -28,75 +33,79 @@ export const FilterModal = ({
   filterType,
   options,
 }: Props) => {
-  const [selected, setSelected] = useState<string | null>(
-    filters[filterType]
-  );
+  const { handleSubmit, setValue, watch, reset } = useForm<FormValues>({
+    defaultValues: { selected: filters[filterType] },
+  });
+
+  const selected = watch("selected");
 
   useEffect(() => {
-    setSelected(filters[filterType]);
-  }, [filters, filterType]);
+    reset({ selected: filters[filterType] });
+  }, [filters, filterType, reset]);
 
-  const handleApply = () => {
+  const title =
+    filterType === "target_muscle" ? "TARGET MUSCLE" : filterType.toUpperCase();
+
+  const applyFilter = ({ selected }: FormValues) => {
     onApply({ ...filters, [filterType]: selected });
     onClose();
   };
 
-  const title =
-    filterType === "target_muscle"
-      ? "TARGET MUSCLE"
-      : filterType.toUpperCase();
+  const values = [null, ...options];
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.container} onPress={() => {}}>
+      <View style={styles.backdrop}>
+        <View style={styles.container}>
           <View style={styles.handle} />
-          <Text style={styles.title}>{title}</Text>
 
-          <ScrollView style={{ maxHeight: 320 }}>
-            <TouchableOpacity
-              style={[styles.option, selected === null && styles.optionActive]}
-              onPress={() => setSelected(null)}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  selected === null && styles.optionTextActive,
-                ]}
-              >
-                All
-              </Text>
-              {selected === null && (
-                <Ionicons name="checkmark" size={18} color="#C8FF00" />
-              )}
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
+
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color="#aaa" />
             </TouchableOpacity>
+          </View>
 
-            {options.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.option, selected === opt && styles.optionActive]}
-                onPress={() => setSelected(opt)}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    selected === opt && styles.optionTextActive,
-                  ]}
+          <ScrollView
+            style={styles.optionsList}
+            keyboardShouldPersistTaps="always"
+          >
+            {values.map((option) => {
+              const active = selected === option;
+              const label = option ?? "All";
+
+              return (
+                <Pressable
+                  key={label}
+                  style={[styles.option, active && styles.optionActive]}
+                  onPress={() => setValue("selected", option)}
                 >
-                  {opt}
-                </Text>
-                {selected === opt && (
-                  <Ionicons name="checkmark" size={18} color="#C8FF00" />
-                )}
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.optionText,
+                      active && styles.optionTextActive,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+
+                  {active && (
+                    <Ionicons name="checkmark" size={18} color="#C8FF00" />
+                  )}
+                </Pressable>
+              );
+            })}
           </ScrollView>
 
-          <TouchableOpacity style={styles.applyBtn} onPress={handleApply}>
+          <TouchableOpacity
+            style={styles.applyBtn}
+            onPress={handleSubmit(applyFilter)}
+          >
             <Text style={styles.applyBtnText}>APPLY</Text>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -122,12 +131,20 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   title: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 2,
-    marginBottom: 16,
+  },
+  optionsList: {
+    maxHeight: 320,
   },
   option: {
     flexDirection: "row",

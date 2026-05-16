@@ -1,8 +1,10 @@
 import Exercises, {
-    Exercise,
-    LaravelPaginatedResponse,
+  Exercise,
+  LaravelPaginatedResponse,
 } from "@/api/exerciseApi";
+import { useNav } from "@/contexts/NavContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
@@ -20,36 +22,26 @@ const muscleFilters = ["all", "chest", "back", "legs", "arms"];
 
 const SEARCH_KEY = "ExercisesScreen.searchText";
 const MUSCLE_KEY = "ExercisesScreen.selectedMuscle";
-const NAV_KEY = "ExercisesScreen.navData";
+// navData is now provided via NavContext
 
 export function useExercisesScreen() {
   const router = useRouter();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState("all");
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
-  const [navData, setNavData] = useState<NavData | null>(null);
+  const { navData } = useNav();
 
   useEffect(() => {
-    // Load nav data and preferences
+    // Load search and muscle preferences
     async function loadState() {
       try {
-        const [savedSearch, savedMuscle, savedNav] = await Promise.all([
+        const [savedSearch, savedMuscle] = await Promise.all([
           AsyncStorage.getItem(SEARCH_KEY),
           AsyncStorage.getItem(MUSCLE_KEY),
-          AsyncStorage.getItem(NAV_KEY),
         ]);
 
-        if (savedSearch !== null) {
-          setSearchText(savedSearch);
-        }
-        if (savedMuscle !== null) {
-          setSelectedMuscle(savedMuscle);
-        }
-        if (savedNav !== null) {
-          setNavData(JSON.parse(savedNav));
-        }
+        if (savedSearch !== null) setSearchText(savedSearch);
+        if (savedMuscle !== null) setSelectedMuscle(savedMuscle);
       } catch (error) {
         console.error("Failed to load state:", error);
       }
@@ -70,24 +62,16 @@ export function useExercisesScreen() {
     );
   }, [selectedMuscle]);
 
-  useEffect(() => {
-    async function fetchExercises() {
-      try {
-        setLoading(true);
+  const { data, isLoading } = useQuery<Exercise[]>({
+    queryKey: ["exercises"],
+    queryFn: async () => {
+      const response: LaravelPaginatedResponse<Exercise> =
+        await Exercises.getAll(1, 100);
+      return response.data;
+    },
+  });
 
-        const response: LaravelPaginatedResponse<Exercise> =
-          await Exercises.getAll(1, 100);
-
-        setExercises(response.data);
-      } catch (error) {
-        console.error("Failed to load exercises:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchExercises();
-  }, []);
+  const exercises = data ?? [];
 
   const visibleExercises = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -110,6 +94,11 @@ export function useExercisesScreen() {
       return matchesMuscle && matchesSearch;
     });
   }, [exercises, searchText, selectedMuscle]);
+
+  const selectedCount = useMemo(
+    () => selectedExercises.length,
+    [selectedExercises],
+  );
 
   function toggleExercise(exercise: Exercise) {
     const key = String(exercise.id ?? exercise.name);
@@ -143,13 +132,13 @@ export function useExercisesScreen() {
 
   return {
     exercises: visibleExercises,
-    loading,
+    loading: isLoading,
     searchText,
     setSearchText,
     selectedMuscle,
     setSelectedMuscle,
     selectedExercises,
-    selectedCount: selectedExercises.length,
+    selectedCount,
     toggleExercise,
     handleAddSelectedExercises,
     muscleFilters,

@@ -14,8 +14,9 @@ export interface PlanExercise {
   name: string;
   sets: number;
   reps: number;
-  day: string;
+  day: string[];
   image_url?: string;
+  originalIds: number[];
 }
 
 export interface UserPlan {
@@ -39,19 +40,42 @@ export const myPlansService = {
     return response.data;
   },
 
-getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
-  const response = await apiBase.get(`/plans/${planId}/exercises`);
-  const data = response.data;
+  getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
+    const response = await apiBase.get(`/plans/${planId}/exercises`);
+    const rawExercises = response.data.exercises || [];
 
-  return (data.exercises || []).map((exercise: any) => ({
-    id: exercise.id,
-    name: exercise.name,
-    image_url: exercise.image_url,
-    sets: exercise.pivot?.sets || 0,
-    reps: exercise.pivot?.reps || 0,
-    day: exercise.pivot?.day || 'Not Set',
-  }));
-},
+    const grouped = rawExercises.reduce((acc: PlanExercise[], current: any) => {
+
+      const existing = acc.find(item =>
+          item.id === current.id &&
+          Number(item.sets) === Number(current.pivot?.sets) &&
+          Number(item.reps) === Number(current.pivot?.reps)
+      );
+
+      if (existing) {
+        const currentDay = current.pivot?.day;
+        if (currentDay && !existing.day.includes(currentDay)) {
+          existing.day.push(currentDay);
+        }
+        existing.originalIds.push(current.pivot.id);
+
+      } else {
+        acc.push({
+          id: current.id,
+          name: current.name,
+          image_url: current.image_url,
+          sets: Number(current.pivot?.sets) || 0,
+          reps: Number(current.pivot?.reps) || 0,
+          day: current.pivot?.day ? [current.pivot.day] : [],
+          originalIds: [current.pivot.id]
+        });
+      }
+
+      return acc;
+    }, []);
+
+    return grouped;
+  },
 
   getPlanById: async (planId: string) => {
     const response = await apiBase.get(`/plans/${planId}`);
@@ -68,6 +92,32 @@ getPlanExercises: async (planId: string): Promise<PlanExercise[]> => {
     return response.data;
   },
 
+getUserPlanById: async (userPlanId: string | number) => {
+  const response = await apiBase.get(`/user-plans/${userPlanId}`);
+  return response.data;
+},
+
+completeExercise: async (userPlanId: number, exerciseId: number) => {
+  const response = await apiBase.post(
+    `/user-plans/${userPlanId}/complete-exercise/${exerciseId}`
+  );
+
+  return response.data;
+},
+
+unsubscribe: async (userPlanId: number) => {
+  const response = await apiBase.delete(`/user-plans/${userPlanId}`);
+  return response.data;
+},
+
+subscribe: async (planId: number) => {
+  const response = await apiBase.post("/user-plans", {
+    plan_id: planId,
+    start_date: new Date().toISOString().split("T")[0],
+  });
+
+  return response.data;
+},
 
 
 };

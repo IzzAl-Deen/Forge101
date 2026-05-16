@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {ActivityIndicator,FlatList, Image,StyleSheet, Text, TouchableOpacity, View,} from "react-native";
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View, } from "react-native";
 import Plans from "@/api/plansApi";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
+import { CachedPlan, getPlans, savePlans } from "@/api/db/plansDB";
 
 type PlanItem = {
   id: number;
@@ -14,22 +15,31 @@ type PlanItem = {
 };
 
 export default function HomePlans() {
-  const [plans, setPlans] = useState<PlanItem[]>([]);
+  const [plans, setPlans] = useState<CachedPlan[]>([]);
   const [loading, setLoading] = useState(true);
+
+
 
   useFocusEffect(
     useCallback(() => {
-        fetchPlans();
+      fetchPlans();
     }, [])
-);
+  );
 
   const fetchPlans = async () => {
     try {
       setLoading(true);
 
-      const response = await Plans.getAll();
+      
+      const cachedPlans = await getPlans();
+      if (cachedPlans.length) {
+        setPlans(cachedPlans);
+      }
 
-      setPlans(response.data || response);
+      const response = await Plans.getAll();
+      setPlans(response);
+
+      await savePlans(response);
     } catch (err) {
       console.error(err);
     } finally {
@@ -37,13 +47,29 @@ export default function HomePlans() {
     }
   };
 
-  if (loading) {
+  // if (loading) {
+  //   return (
+  //     <ActivityIndicator
+  //       size="large"
+  //       color="#ccff00"
+  //       style={{ marginTop: 30 }}
+  //     />
+  //   );
+  // }
+
+  if (!plans.length) {
     return (
-      <ActivityIndicator
-        size="large"
-        color="#ccff00"
-        style={{ marginTop: 30 }}
-      />
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyEmoji}>🏋️</Text>
+
+        <Text style={styles.emptyTitle}>
+          No Plans yet
+        </Text>
+
+        <Text style={styles.emptySubtitle}>
+          Create a training plan to see it here.
+        </Text>
+      </View>
     );
   }
 
@@ -63,9 +89,9 @@ export default function HomePlans() {
         keyExtractor={(item) => item.id.toString()}
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} 
-        //    onPress={() => router.push()}
-           >
+          <TouchableOpacity style={styles.card}
+             onPress={() => router.push(`/(private)/plans/detailes/${item.id}`)}
+          >
             <Image
               source={{
                 uri:
@@ -167,5 +193,38 @@ const styles = StyleSheet.create({
   description: {
     color: "#999",
     fontSize: 13,
+  },
+  center: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+
+  emptyContainer: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 30,
+  },
+
+  emptyEmoji: {
+    fontSize: 42,
+    marginBottom: 10,
+  },
+
+  emptyTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 6,
+  },
+
+  emptySubtitle: {
+    color: "#888",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
