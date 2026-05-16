@@ -2,6 +2,7 @@ import Exercises, {
   Exercise,
   LaravelPaginatedResponse,
 } from "@/api/exerciseApi";
+import { useNav } from "@/contexts/NavContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -21,34 +22,26 @@ const muscleFilters = ["all", "chest", "back", "legs", "arms"];
 
 const SEARCH_KEY = "ExercisesScreen.searchText";
 const MUSCLE_KEY = "ExercisesScreen.selectedMuscle";
-const NAV_KEY = "ExercisesScreen.navData";
+// navData is now provided via NavContext
 
 export function useExercisesScreen() {
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState("all");
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
-  const [navData, setNavData] = useState<NavData | null>(null);
+  const { navData } = useNav();
 
   useEffect(() => {
-    // Load nav data and preferences
+    // Load search and muscle preferences
     async function loadState() {
       try {
-        const [savedSearch, savedMuscle, savedNav] = await Promise.all([
+        const [savedSearch, savedMuscle] = await Promise.all([
           AsyncStorage.getItem(SEARCH_KEY),
           AsyncStorage.getItem(MUSCLE_KEY),
-          AsyncStorage.getItem(NAV_KEY),
         ]);
 
-        if (savedSearch !== null) {
-          setSearchText(savedSearch);
-        }
-        if (savedMuscle !== null) {
-          setSelectedMuscle(savedMuscle);
-        }
-        if (savedNav !== null) {
-          setNavData(JSON.parse(savedNav));
-        }
+        if (savedSearch !== null) setSearchText(savedSearch);
+        if (savedMuscle !== null) setSelectedMuscle(savedMuscle);
       } catch (error) {
         console.error("Failed to load state:", error);
       }

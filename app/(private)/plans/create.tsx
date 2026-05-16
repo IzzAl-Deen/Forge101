@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as FileSystem from 'expo-file-system/legacy';
+import Plans from "@/api/plansApi";
+import { PendingExercise } from "@/components/plan-exercises";
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
 import useSelectedExercises from "@/hooks/use-selected-exercises";
 import { supabase } from "@/lib/supabase";
-import Plans from "@/api/plansApi";
-import { PendingExercise } from "@/components/plan-exercises";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, StyleSheet } from "react-native";
 
 const IMAGE_STORAGE_KEY = "PlanForm.selectedImage";
 const FORM_DATA_KEY = "PlanForm.data";
@@ -33,15 +33,17 @@ export default function CreatePlanScreen() {
 
   useEffect(() => {
     AsyncStorage.getItem(IMAGE_STORAGE_KEY)
-        .then((savedImage) => {
-          if (savedImage) setSelectedImage(savedImage);
-        })
-        .catch(console.error);
+      .then((savedImage) => {
+        if (savedImage) setSelectedImage(savedImage);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
     if (selectedImage) {
-      AsyncStorage.setItem(IMAGE_STORAGE_KEY, selectedImage).catch(console.error);
+      AsyncStorage.setItem(IMAGE_STORAGE_KEY, selectedImage).catch(
+        console.error,
+      );
     } else {
       AsyncStorage.removeItem(IMAGE_STORAGE_KEY).catch(console.error);
     }
@@ -63,7 +65,9 @@ export default function CreatePlanScreen() {
     mutationFn: async (data: any) => {
       console.log("Step 1: start");
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       console.log("Step 2: session", session?.user?.id);
       if (!session?.user) throw new Error("Not authenticated");
 
@@ -71,28 +75,28 @@ export default function CreatePlanScreen() {
 
       if (selectedImage) {
         console.log("Step 3: uploading image");
-        const fileExt = selectedImage.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileExt = selectedImage.split(".").pop()?.toLowerCase() || "jpg";
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `plans/${fileName}`;
 
         const base64 = await FileSystem.readAsStringAsync(selectedImage, {
-          encoding: 'base64' as any,
+          encoding: "base64" as any,
         });
 
         const arrayBuffer = base64ToArrayBuffer(base64);
 
         const { error: uploadError } = await supabase.storage
-            .from('plans')
-            .upload(filePath, arrayBuffer, {
-              contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
-              upsert: true,
-            });
+          .from("plans")
+          .upload(filePath, arrayBuffer, {
+            contentType: `image/${fileExt === "jpg" ? "jpeg" : fileExt}`,
+            upsert: true,
+          });
 
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage
-            .from('plans')
-            .getPublicUrl(filePath);
+          .from("plans")
+          .getPublicUrl(filePath);
 
         finalImageUrl = publicUrlData.publicUrl;
         console.log("Step 4: image uploaded", finalImageUrl);
@@ -109,7 +113,8 @@ export default function CreatePlanScreen() {
       });
       console.log("Step 6: plan created", createdPlan);
 
-      const planId = createdPlan.id || createdPlan.plan?.id || createdPlan.data?.id;
+      const planId =
+        createdPlan.id || createdPlan.plan?.id || createdPlan.data?.id;
       if (!planId) throw new Error("Failed to get plan ID");
 
       console.log("Step 7: attaching exercises", exercises.length);
@@ -131,7 +136,7 @@ export default function CreatePlanScreen() {
       return createdPlan;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      queryClient.invalidateQueries({ queryKey: ["plans"] });
       setModalVisible(true);
       setSelectedImage(null);
       AsyncStorage.removeItem(IMAGE_STORAGE_KEY).catch(console.error);
@@ -142,26 +147,28 @@ export default function CreatePlanScreen() {
       console.error("status:", error?.response?.status);
       console.error("data:", error?.response?.data);
       Alert.alert("Error", error?.message || "Failed to create plan");
-    }
+    },
   });
 
   return (
-      <ScrollView contentContainerStyle={styles.container}>
-        <PlanForm
-            exercises={exercises}
-            submitLabel={createPlanMutation.isPending ? "CREATING PLAN..." : "SAVE PLAN"}
-            onSubmit={(data) => createPlanMutation.mutate(data)}
-            onExercisesChange={setExercises}
-            disabled={createPlanMutation.isPending}
-            selectedImage={selectedImage}
-            onPickImage={pickImage}
-        />
-        <SuccessModal
-            visible={modalVisible}
-            message="Plan created successfully!"
-            onClose={() => setModalVisible(false)}
-        />
-      </ScrollView>
+    <ScrollView contentContainerStyle={styles.container}>
+      <PlanForm
+        exercises={exercises}
+        submitLabel={
+          createPlanMutation.isPending ? "CREATING PLAN..." : "SAVE PLAN"
+        }
+        onSubmit={(data) => createPlanMutation.mutate(data)}
+        onExercisesChange={setExercises}
+        disabled={createPlanMutation.isPending}
+        selectedImage={selectedImage}
+        onPickImage={pickImage}
+      />
+      <SuccessModal
+        visible={modalVisible}
+        message="Plan created successfully!"
+        onClose={() => setModalVisible(false)}
+      />
+    </ScrollView>
   );
 }
 
@@ -169,6 +176,6 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: "#121212",
-    padding: 24
+    padding: 24,
   },
 });

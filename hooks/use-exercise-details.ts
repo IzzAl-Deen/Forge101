@@ -1,4 +1,5 @@
 import Exercises from "@/api/exerciseApi";
+import { useNav } from "@/contexts/NavContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -41,8 +42,9 @@ export function useExerciseDetails() {
     selectedIds?: string;
   }>();
   const [items, setItems] = useState<ExerciseFormItem[]>([]);
+  const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [navData, setNavData] = useState<NavData | null>(null);
+  const { navData } = useNav();
 
   const { data: selectedItems = [], isLoading: loading } = useQuery<
     ExerciseFormItem[]
@@ -73,24 +75,18 @@ export function useExerciseDetails() {
     enabled: !!selectedIds,
   });
 
+  // navData comes from NavContext (set by the caller flow)
+
   useEffect(() => {
-    async function loadNavData() {
-      try {
-        const savedNav = await AsyncStorage.getItem("ExercisesScreen.navData");
-        if (savedNav) {
-          setNavData(JSON.parse(savedNav));
-        }
-      } catch (error) {
-        console.error("Failed to load nav data:", error);
-      }
+    if (!initialized && selectedItems.length > 0) {
+      setItems(selectedItems);
+      setInitialized(true);
     }
-
-    loadNavData();
-  }, []);
+  }, [initialized, selectedItems]);
 
   useEffect(() => {
-    setItems(selectedItems);
-  }, [selectedItems]);
+    setInitialized(false);
+  }, [selectedIds]);
 
   function updateItem(
     exerciseId: number,
