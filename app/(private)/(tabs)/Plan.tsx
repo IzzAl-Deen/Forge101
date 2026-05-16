@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator } fro
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
-import { router } from 'expo-router';
 
 import { myPlansService } from '@/api/MyPlansService';
 import { Header } from '@/components/MyPlansScreen/Header';

@@ -4,10 +4,10 @@ export const db = SQLite.openDatabaseSync("fitness.db");
 
 export const initDatabase = async () => {
   try {
-    // await db.execAsync(`
-    //         DROP TABLE IF EXISTS plans;
-    //         DROP TABLE IF EXISTS exercises;
-    //     `);
+    await db.execAsync(`
+            DROP TABLE IF EXISTS plans;
+            DROP TABLE IF EXISTS exercises;
+        `);
 
     await db.execAsync(`
             CREATE TABLE plans (
