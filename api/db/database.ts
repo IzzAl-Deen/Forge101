@@ -9,7 +9,8 @@ export const initDatabase = async () => {
                 id INTEGER PRIMARY KEY NOT NULL,
                 name TEXT,
                 difficulty TEXT,
-                duration_minutes INTEGER
+                duration_minutes INTEGER,
+                image_url TEXT
             );
         `);
 
@@ -17,21 +18,11 @@ export const initDatabase = async () => {
             CREATE TABLE IF NOT EXISTS exercises (
                 id INTEGER PRIMARY KEY NOT NULL,
                 name TEXT,
-                target_muscle TEXT,
-                description TEXT,
-                image_url TEXT
-            );
-        `);
-
-        await db.execAsync(`
-            CREATE TABLE IF NOT EXISTS plan_exercises (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                plan_id INTEGER,
-                exercise_id INTEGER,
                 sets INTEGER,
                 reps INTEGER,
                 day TEXT,
-                order_index INTEGER
+                target_muscle TEXT,
+                image_url TEXT
             );
         `);
 

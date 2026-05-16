@@ -4,7 +4,6 @@ export type CachedExercise = {
     id: number;
     name: string;
     target_muscle?: string;
-    description?: string;
     image_url?: string;
 
     sets?: number;
@@ -26,7 +25,6 @@ export const saveExercises = async (
                     id,
                     name,
                     target_muscle,
-                    description,
                     image_url,
                     sets,
                     reps,
@@ -37,7 +35,6 @@ export const saveExercises = async (
                     exercise.id,
                     exercise.name,
                     exercise.target_muscle || "",
-                    exercise.description || "",
                     exercise.image_url || "",
                     exercise.sets || 0,
                     exercise.reps || 0,
@@ -60,7 +57,6 @@ export const getExercises = async (): Promise<CachedExercise[]> => {
             id: exercise.id,
             name: exercise.name,
             target_muscle: exercise.target_muscle,
-            description: exercise.description,
             image_url: exercise.image_url,
 
             pivot: {
