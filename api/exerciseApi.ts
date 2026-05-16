@@ -1,5 +1,15 @@
-import type { Exercise } from "@/types/exercise";
 import apiBase from "./ApiBase";
+
+export type Exercise = {
+  id?: number;
+  name: string;
+  target_muscle: string;
+  description: string;
+  image_url: string | null;
+  video_url: string | null;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  category: string;
+};
 
 export type LaravelPaginatedResponse<T> = {
   current_page: number;
@@ -41,7 +51,6 @@ const Exercises = {
         per_page: perPage,
       },
     });
-
     return response.data;
   },
 
@@ -63,16 +72,15 @@ const Exercises = {
         per_page: params.per_page ?? 10,
       },
     });
-
     return response.data;
   },
 
-  create: async (exercise: Exercise): Promise<Exercise> => {
+  create: async (exercise: Exercise) => {
     const response = await apiBase.post("/exercises", exercise);
     return response.data;
   },
 
-  update: async (id: number, exercise: Partial<Exercise>): Promise<Exercise> => {
+  update: async (id: number, exercise: Partial<Exercise>) => {
     const response = await apiBase.put(`/exercises/${id}`, exercise);
     return response.data;
   },
