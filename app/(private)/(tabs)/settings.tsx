@@ -1,69 +1,83 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { supabase } from "@/lib/supabase";
+import authApi from "@/api/authApi";
 import { Kinetic, Spacing } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import { authenticateWithBiometrics, disableBiometrics, enableBiometrics, isBiometricAvailable, isBiometricEnabled } from "@/hooks/use-biometric-auth";
+import { supabase } from "@/lib/supabase";
+
+type FormData = {
+	name: string;
+	avatarUrl: string;
+};
 
 export default function SettingsScreen() {
-	const [fullName, setFullName] = useState("");
-	const [avatarUrl, setAvatarUrl] = useState("");
-	const [saving, setSaving] = useState(false);
+	const { signOut } = useAuth();
+	const qc = useQueryClient();
 
 	const [biometricAvailable, setBiometricAvailable] = useState(false);
 	const [biometricEnabled, setBiometricEnabled] = useState(false);
 	const [togglingBiometric, setTogglingBiometric] = useState(false);
 
+	const { data: profileData } = useQuery({
+		queryKey: ["profile"],
+		queryFn: authApi.getProfile,
+	});
+
+	const defaultValues = useMemo<FormData>(() => ({ name: profileData?.name ?? "", avatarUrl: profileData?.avatar_url ?? "" }), [profileData]);
+
+	const {
+		control,
+		handleSubmit,
+		reset,
+		formState: { errors },
+	} = useForm<FormData>({ defaultValues });
+
 	useEffect(() => {
-		async function load() {
-			const {
-				data: { user },
-			} = await supabase.auth.getUser();
-			if (user) {
-				setFullName(user.user_metadata?.full_name ?? "");
-				setAvatarUrl(user.user_metadata?.avatar_url ?? "");
-			}
+		reset(defaultValues);
+	}, [defaultValues, reset]);
+
+	useEffect(() => {
+		async function loadBiometric() {
 			const available = await isBiometricAvailable();
 			setBiometricAvailable(available);
-			if (available) {
-				const enabled = await isBiometricEnabled();
-				setBiometricEnabled(enabled);
-			}
+			if (available) setBiometricEnabled(await isBiometricEnabled());
 		}
-		load();
+		loadBiometric();
 	}, []);
 
-	async function handleSave() {
-		setSaving(true);
-		const { error } = await supabase.auth.updateUser({
-			data: { full_name: fullName, avatar_url: avatarUrl },
-		});
-		setSaving(false);
-		if (error) {
-			Alert.alert("Save failed", error.message);
-		} else {
+	const updateMutation = useMutation({
+		mutationFn: authApi.updateProfile,
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["profile"] });
 			Alert.alert("Saved", "Your profile has been updated.");
-		}
-	}
+		},
+		onError: (err: Error) => Alert.alert("Save failed", err.message),
+	});
 
-	async function handleBiometricToggle(value: boolean) {
+	const handleSave = useCallback(
+		(data: FormData) => {
+			updateMutation.mutate({ name: data.name, avatar_url: data.avatarUrl || null });
+		},
+		[updateMutation],
+	);
+
+	const handleBiometricToggle = useCallback(async (value: boolean) => {
 		setTogglingBiometric(true);
 		try {
 			if (value) {
-
 				const result = await authenticateWithBiometrics();
-				if (result !== "success") {
-					setTogglingBiometric(false);
-					return;
-				}
+				if (result !== "success") return;
 				const {
 					data: { session },
 				} = await supabase.auth.getSession();
 				if (!session?.refresh_token) {
 					Alert.alert("Error", "No active session found.");
-					setTogglingBiometric(false);
 					return;
 				}
 				await enableBiometrics(session.refresh_token);
@@ -74,23 +88,17 @@ export default function SettingsScreen() {
 			}
 		} catch {
 			Alert.alert("Error", "Failed to update biometric setting.");
+		} finally {
+			setTogglingBiometric(false);
 		}
-		setTogglingBiometric(false);
-	}
+	}, []);
 
-	async function handleSignOut() {
+	const handleSignOut = useCallback(() => {
 		Alert.alert("Sign Out", "Are you sure you want to sign out?", [
 			{ text: "Cancel", style: "cancel" },
-			{
-				text: "Sign Out",
-				style: "destructive",
-				onPress: async () => {
-					await disableBiometrics();
-					await supabase.auth.signOut();
-				},
-			},
+			{ text: "Sign Out", style: "destructive", onPress: signOut },
 		]);
-	}
+	}, [signOut]);
 
 	return (
 		<View style={styles.container}>
@@ -101,8 +109,8 @@ export default function SettingsScreen() {
 				</View>
 
 				<View style={styles.avatarSection}>
-					{avatarUrl ? (
-						<Image source={{ uri: avatarUrl }} style={styles.avatar} />
+					{profileData?.avatar_url ? (
+						<Image source={{ uri: profileData.avatar_url }} style={styles.avatar} />
 					) : (
 						<View style={styles.avatarPlaceholder}>
 							<MaterialIcons name="person" size={40} color={Kinetic.textFaint} />
@@ -115,23 +123,37 @@ export default function SettingsScreen() {
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>FULL NAME</Text>
-						<View style={styles.inputRow}>
-							<MaterialIcons name="person-outline" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
-							<TextInput style={styles.input} placeholder="Your full name" placeholderTextColor={Kinetic.textFaint} value={fullName} onChangeText={setFullName} />
-						</View>
+						<Controller
+							control={control}
+							name="name"
+							rules={{ required: "Name is required." }}
+							render={({ field: { onChange, value } }) => (
+								<View style={[styles.inputRow, errors.name ? styles.inputRowError : null]}>
+									<MaterialIcons name="person-outline" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
+									<TextInput style={styles.input} placeholder="Your full name" placeholderTextColor={Kinetic.textFaint} value={value} onChangeText={onChange} />
+								</View>
+							)}
+						/>
+						{errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
 					</View>
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>AVATAR URL</Text>
-						<View style={styles.inputRow}>
-							<MaterialIcons name="image" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
-							<TextInput style={styles.input} placeholder="https://example.com/avatar.jpg" placeholderTextColor={Kinetic.textFaint} value={avatarUrl} onChangeText={setAvatarUrl} autoCapitalize="none" keyboardType="url" />
-						</View>
+						<Controller
+							control={control}
+							name="avatarUrl"
+							render={({ field: { onChange, value } }) => (
+								<View style={styles.inputRow}>
+									<MaterialIcons name="image" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
+									<TextInput style={styles.input} placeholder="https://example.com/avatar.jpg" placeholderTextColor={Kinetic.textFaint} value={value} onChangeText={onChange} autoCapitalize="none" keyboardType="url" />
+								</View>
+							)}
+						/>
 					</View>
 
-					<Pressable style={styles.btnWrapper} onPress={handleSave} disabled={saving}>
+					<Pressable style={styles.btnWrapper} onPress={handleSubmit(handleSave)} disabled={updateMutation.isPending}>
 						<LinearGradient colors={[Kinetic.accentLight, Kinetic.accentPrimary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
-							<Text style={styles.btnText}>{saving ? "Saving..." : "SAVE CHANGES"}</Text>
+							<Text style={styles.btnText}>{updateMutation.isPending ? "Saving..." : "SAVE CHANGES"}</Text>
 						</LinearGradient>
 					</Pressable>
 				</View>
@@ -252,6 +274,9 @@ const styles = StyleSheet.create({
 		borderColor: Kinetic.inputBorder,
 		paddingHorizontal: 14,
 	},
+	inputRowError: {
+		borderColor: Kinetic.error,
+	},
 	inputIcon: {
 		marginRight: Spacing.xs + 2,
 	},
@@ -260,6 +285,11 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: Kinetic.white,
 		height: "100%",
+	},
+	errorText: {
+		fontSize: 11,
+		color: Kinetic.error,
+		marginTop: 4,
 	},
 	btnWrapper: {
 		marginTop: Spacing.sm,

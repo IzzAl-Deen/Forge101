@@ -1,10 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useCallback, useMemo, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { Kinetic } from "@/constants/theme";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-auth";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{7,}$/;
@@ -13,6 +14,26 @@ type FormData = { name: string; email: string; password: string };
 
 export default function RegisterScreen() {
 	const router = useRouter();
+	const { signUp } = useAuth();
+
+	const emailRef = useRef<TextInput>(null);
+	const passwordRef = useRef<TextInput>(null);
+
+	const validationRules = useMemo(
+		() => ({
+			name: { required: "Full name is required." },
+			email: {
+				required: "Email is required.",
+				pattern: { value: EMAIL_REGEX, message: "Enter a valid email address." },
+			},
+			password: {
+				required: "Password is required.",
+				pattern: { value: PASSWORD_REGEX, message: "7+ chars, uppercase, lowercase, number, and special character." },
+			},
+		}),
+		[],
+	);
+
 	const {
 		control,
 		handleSubmit,
@@ -21,18 +42,13 @@ export default function RegisterScreen() {
 		defaultValues: { name: "", email: "", password: "" },
 	});
 
-	async function onSubmit(data: FormData) {
-		const { error } = await supabase.auth.signUp({
-			email: data.email,
-			password: data.password,
-			options: { data: { full_name: data.name } },
-		});
-		if (error) {
-			Alert.alert("Registration failed", error.message);
-		} else {
-			router.replace("/(private)/(tabs)");
-		}
-	}
+	const onSubmit = useCallback(
+		async (data: FormData) => {
+			const errMsg = await signUp(data.email, data.password, data.name);
+			if (errMsg) Alert.alert("Registration failed", errMsg);
+		},
+		[signUp],
+	);
 
 	return (
 		<ImageBackground source={{ uri: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900" }} style={styles.bg} blurRadius={Platform.OS === "web" ? 0 : 2}>
@@ -46,35 +62,19 @@ export default function RegisterScreen() {
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>NAME</Text>
-						<Controller control={control} name="name" rules={{ required: "Full name is required." }} render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.name ? styles.inputError : null]} placeholder="Full Name" placeholderTextColor={Kinetic.textFaint} value={value} onChangeText={onChange} />} />
+						<Controller control={control} name="name" rules={validationRules.name} render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.name ? styles.inputError : null]} placeholder="Full Name" placeholderTextColor={Kinetic.textFaint} value={value} onChangeText={onChange} returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} />} />
 						{errors.name ? <Text style={styles.errorText}>{errors.name.message}</Text> : null}
 					</View>
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>EMAIL</Text>
-						<Controller
-							control={control}
-							name="email"
-							rules={{
-								required: "Email is required.",
-								pattern: { value: EMAIL_REGEX, message: "Enter a valid email address." },
-							}}
-							render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder="example@gmail.com" placeholderTextColor={Kinetic.textFaint} autoCapitalize="none" keyboardType="email-address" value={value} onChangeText={onChange} />}
-						/>
+						<Controller control={control} name="email" rules={validationRules.email} render={({ field: { onChange, value } }) => <TextInput ref={emailRef} style={[styles.input, errors.email ? styles.inputError : null]} placeholder="example@gmail.com" placeholderTextColor={Kinetic.textFaint} autoCapitalize="none" keyboardType="email-address" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} value={value} onChangeText={onChange} />} />
 						{errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
 					</View>
 
 					<View style={styles.fieldGroup}>
 						<Text style={styles.label}>PASSWORD</Text>
-						<Controller
-							control={control}
-							name="password"
-							rules={{
-								required: "Password is required.",
-								pattern: { value: PASSWORD_REGEX, message: "7+ chars, uppercase, lowercase, number, and special character." },
-							}}
-							render={({ field: { onChange, value } }) => <TextInput style={[styles.input, errors.password ? styles.inputError : null]} placeholder="••••••••" placeholderTextColor={Kinetic.textFaint} secureTextEntry value={value} onChangeText={onChange} />}
-						/>
+						<Controller control={control} name="password" rules={validationRules.password} render={({ field: { onChange, value } }) => <TextInput ref={passwordRef} style={[styles.input, errors.password ? styles.inputError : null]} placeholder="••••••••" placeholderTextColor={Kinetic.textFaint} secureTextEntry returnKeyType="done" value={value} onChangeText={onChange} />} />
 						{errors.password ? <Text style={styles.errorText}>{errors.password.message}</Text> : null}
 					</View>
 

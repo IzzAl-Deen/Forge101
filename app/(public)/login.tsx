@@ -1,12 +1,12 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { supabase } from "@/lib/supabase";
 import { Kinetic, Spacing } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
 import { authenticateWithBiometrics, isBiometricAvailable, isBiometricEnabled } from "@/hooks/use-biometric-auth";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,8 +18,22 @@ type FormData = {
 
 export default function LoginScreen() {
 	const router = useRouter();
+	const { signIn } = useAuth();
 	const [showBiometric, setShowBiometric] = useState(false);
 	const [biometricLoading, setBiometricLoading] = useState(false);
+
+	const passwordRef = useRef<TextInput>(null);
+
+	const validationRules = useMemo(
+		() => ({
+			email: {
+				required: "Email is required.",
+				pattern: { value: EMAIL_REGEX, message: "Enter a valid email address." },
+			},
+			password: { required: "Password is required." },
+		}),
+		[],
+	);
 
 	const {
 		control,
@@ -31,31 +45,27 @@ export default function LoginScreen() {
 		async function checkBiometric() {
 			const available = await isBiometricAvailable();
 			if (!available) return;
-			const enabled = await isBiometricEnabled();
-			setShowBiometric(enabled);
+			setShowBiometric(await isBiometricEnabled());
 		}
 		checkBiometric();
 	}, []);
 
-	async function handleBiometricLogin() {
+	const handleBiometricLogin = useCallback(async () => {
 		setBiometricLoading(true);
 		const result = await authenticateWithBiometrics();
 		setBiometricLoading(false);
-		if (result === "success") {
-			router.replace("/(private)/(tabs)");
-		} else if (result === "error") {
+		if (result === "error") {
 			Alert.alert("Biometric login failed", "Could not verify identity. Please log in with your password.");
 		}
-	}
+	}, []);
 
-	async function onSubmit(data: FormData) {
-		const { error } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-		if (error) {
-			Alert.alert("Login failed", error.message);
-		} else {
-			router.replace("/(private)/(tabs)");
-		}
-	}
+	const onSubmit = useCallback(
+		async (data: FormData) => {
+			const errMsg = await signIn(data.email, data.password);
+			if (errMsg) Alert.alert("Login failed", errMsg);
+		},
+		[signIn],
+	);
 
 	return (
 		<ImageBackground source={{ uri: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900" }} style={styles.bg} blurRadius={Platform.OS === "web" ? 0 : 2}>
@@ -83,14 +93,11 @@ export default function LoginScreen() {
 							<Controller
 								control={control}
 								name="email"
-								rules={{
-									required: "Email is required.",
-									pattern: { value: EMAIL_REGEX, message: "Enter a valid email address." },
-								}}
+								rules={validationRules.email}
 								render={({ field: { onChange, value } }) => (
 									<View style={[styles.inputRow, errors.email ? styles.inputRowError : null]}>
 										<MaterialIcons name="mail-outline" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
-										<TextInput style={styles.input} placeholder="example@gmail.com" placeholderTextColor={Kinetic.textFaint} autoCapitalize="none" keyboardType="email-address" value={value} onChangeText={onChange} />
+										<TextInput style={styles.input} placeholder="example@gmail.com" placeholderTextColor={Kinetic.textFaint} autoCapitalize="none" keyboardType="email-address" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} value={value} onChangeText={onChange} />
 									</View>
 								)}
 							/>
@@ -107,11 +114,11 @@ export default function LoginScreen() {
 							<Controller
 								control={control}
 								name="password"
-								rules={{ required: "Password is required." }}
+								rules={validationRules.password}
 								render={({ field: { onChange, value } }) => (
 									<View style={[styles.inputRow, errors.password ? styles.inputRowError : null]}>
 										<MaterialIcons name="lock-outline" size={16} color={Kinetic.textFaint} style={styles.inputIcon} />
-										<TextInput style={styles.input} placeholder="••••••••" placeholderTextColor={Kinetic.textFaint} secureTextEntry value={value} onChangeText={onChange} />
+										<TextInput ref={passwordRef} style={styles.input} placeholder="••••••••" placeholderTextColor={Kinetic.textFaint} secureTextEntry returnKeyType="done" value={value} onChangeText={onChange} />
 									</View>
 								)}
 							/>
@@ -121,7 +128,7 @@ export default function LoginScreen() {
 
 					<Pressable style={styles.btnWrapper} onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
 						<LinearGradient colors={[Kinetic.accentLight, Kinetic.accentPrimary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
-							<Text style={styles.btnText}>{isSubmitting ? "Logging in..." : "LOGIN ⚡"}</Text>
+							<Text style={styles.btnText}>{isSubmitting ? "Logging in..." : "LOGIN"}</Text>
 						</LinearGradient>
 					</Pressable>
 
