@@ -92,6 +92,32 @@ export const myPlansService = {
     return response.data;
   },
 
+getUserPlanById: async (userPlanId: string | number) => {
+  const response = await apiBase.get(`/user-plans/${userPlanId}`);
+  return response.data;
+},
+
+completeExercise: async (userPlanId: number, exerciseId: number) => {
+  const response = await apiBase.post(
+    `/user-plans/${userPlanId}/complete-exercise/${exerciseId}`
+  );
+
+  return response.data;
+},
+
+unsubscribe: async (userPlanId: number) => {
+  const response = await apiBase.delete(`/user-plans/${userPlanId}`);
+  return response.data;
+},
+
+subscribe: async (planId: number) => {
+  const response = await apiBase.post("/user-plans", {
+    plan_id: planId,
+    start_date: new Date().toISOString().split("T")[0],
+  });
+
+  return response.data;
+},
 
 
 };
