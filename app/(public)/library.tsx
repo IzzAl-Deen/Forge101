@@ -1,5 +1,6 @@
 import { ExerciseCard } from "@/components/exercise-card";
 import { FilterModal } from "@/components/filter-modal";
+import { useExerciseFilters } from "@/contexts/ExerciseFiltersContext";
 import { useExercises } from "@/hooks/use-exercises";
 import { CATEGORIES, DIFFICULTIES, MUSCLES } from "@/types/exercise";
 import type { Exercise, ExerciseFilters } from "@/types/exercise";
@@ -20,11 +21,8 @@ export default function LibraryScreen() {
   const listRef = useRef<FlatList<Exercise>>(null);
 
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<ExerciseFilters>({
-    target_muscle: null,
-    difficulty: null,
-    category: null,
-  });
+  const { filters, setFilters } = useExerciseFilters();
+
   const [activeModal, setActiveModal] = useState<keyof ExerciseFilters | null>(
     null,
   );
@@ -54,10 +52,13 @@ export default function LibraryScreen() {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, []);
 
-  const handleApplyFilter = useCallback((newFilters: ExerciseFilters) => {
-    setFilters(newFilters);
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, []);
+  const handleApplyFilter = useCallback(
+    (newFilters: ExerciseFilters) => {
+      setFilters(newFilters);
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    },
+    [setFilters],
+  );
 
   const handleLoadMore = useCallback(() => {
     if (hasMore && !loadingMore) {
