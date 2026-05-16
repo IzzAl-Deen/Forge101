@@ -22,6 +22,7 @@ const MAPPING = {
   'brain.head.profile.fill': 'psychology',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'person.crop.circle.fill': 'account-circle',
 } as IconMapping;
 
 /**
