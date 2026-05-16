@@ -62,7 +62,7 @@ export const SubscriptionCard = ({ item, index }: SubscriptionCardProps) => {
 
                     <TouchableOpacity
                         style={[styles.viewBtn, isFinished && { backgroundColor: '#cefc22' }]}
-                        onPress={() => router.push(`/WorkoutSession/${item.id}`)}
+                        onPress={() => router.push(`/workout-session/${item.id}`)}
                     >
                         <Text style={styles.viewBtnText}>
                             {isFinished ? "VIEW SUMMARY" : "VIEW PROGRESS"}

@@ -21,10 +21,15 @@ function ScreenContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const { data, isLoading, isError, refetch } = useWorkoutSession(id);
-  const { completeExercise, unsubscribe } = usePlanActions(id);
+  const { completeExercise, unsubscribe } = usePlanActions();
+
+  const planId = Number(id);
 
   const plan = data?.plan;
-  const exercises = useMemo(() => plan?.exercises || [], [plan]);
+  const exercises = useMemo(
+  () => plan?.exercises || [],
+  [plan?.exercises]
+  );
 
   const completedIds = useMemo(() => {
     return data?.progress?.map((item: any) => item.exercise_id) || [];
@@ -32,9 +37,12 @@ function ScreenContent() {
 
   const handleComplete = useCallback(
     (exerciseId: number) => {
-      completeExercise.mutate(exerciseId);
+      completeExercise.mutate({
+        userPlanId: planId,
+        exerciseId,
+      });
     },
-    [completeExercise]
+    [completeExercise, planId]
   );
 
   if (isLoading) {
@@ -72,14 +80,16 @@ function ScreenContent() {
 
         {exercises.map((exercise: any) => (
           <ExerciseCheckItem
-            key={`${exercise.id}-${exercise.pivot?.id}`}
+            key={`${exercise.id}-${exercise.pivot?.id ?? ""}-${exercise.pivot?.day ?? ""}-${Math.random()}`}
             exercise={exercise}
             checked={completedIds.includes(exercise.id)}
             onPress={handleComplete}
           />
         ))}
 
-        <UnsubscribeButton onPress={() => unsubscribe.mutate()} />
+        <UnsubscribeButton
+          onPress={() => unsubscribe.mutate(planId)}
+        />
       </ScrollView>
     </SafeAreaView>
   );
