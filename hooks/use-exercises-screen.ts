@@ -3,6 +3,7 @@ import Exercises, {
   LaravelPaginatedResponse,
 } from "@/api/exerciseApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
@@ -24,8 +25,6 @@ const NAV_KEY = "ExercisesScreen.navData";
 
 export function useExercisesScreen() {
   const router = useRouter();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState("all");
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
@@ -70,24 +69,16 @@ export function useExercisesScreen() {
     );
   }, [selectedMuscle]);
 
-  useEffect(() => {
-    async function fetchExercises() {
-      try {
-        setLoading(true);
+  const { data, isLoading } = useQuery<Exercise[]>({
+    queryKey: ["exercises"],
+    queryFn: async () => {
+      const response: LaravelPaginatedResponse<Exercise> =
+        await Exercises.getAll(1, 100);
+      return response.data;
+    },
+  });
 
-        const response: LaravelPaginatedResponse<Exercise> =
-          await Exercises.getAll(1, 100);
-
-        setExercises(response.data);
-      } catch (error) {
-        console.error("Failed to load exercises:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchExercises();
-  }, []);
+  const exercises = data ?? [];
 
   const visibleExercises = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -148,7 +139,7 @@ export function useExercisesScreen() {
 
   return {
     exercises: visibleExercises,
-    loading,
+    loading: isLoading,
     searchText,
     setSearchText,
     selectedMuscle,
