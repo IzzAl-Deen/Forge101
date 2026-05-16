@@ -2,6 +2,7 @@ import Plans from "@/api/plansApi";
 import { PendingExercise } from "@/components/plan-exercises";
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
+import { useNav } from "@/contexts/NavContext";
 import { Plan } from "@/types/plan";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
@@ -35,57 +36,52 @@ export default function EditPlanScreen() {
     loadPlan();
   }, [loadPlan]);
 
+  const { setNavData } = useNav();
+
   useEffect(() => {
-    AsyncStorage.getItem("selectedExercises")
-        .then((saved) => {
-          const parsed = saved ? JSON.parse(saved) : null;
+    async function loadExercises() {
+      try {
+        const [savedExercises, res] = await Promise.all([
+          AsyncStorage.getItem("selectedExercises"),
+          Plans.getExercises(Number(id)),
+        ]);
 
-          Plans.getExercises(Number(id))
-              .then((res) => {
+        const stored = savedExercises ? JSON.parse(savedExercises) : [];
+        if (savedExercises) {
+          await AsyncStorage.removeItem("selectedExercises");
+        }
 
-                const groupedExercises = res.exercises.reduce(
-                    (acc: any[], ex: any) => {
+        const groupedExercises = res.exercises.reduce((acc: any[], ex: any) => {
+          const key = `${ex.id}-${ex.pivot?.sets}-${ex.pivot?.reps}`;
+          const existing = acc.find((item) => item.key === key);
 
-                      const key = `${ex.id}-${ex.pivot?.sets}-${ex.pivot?.reps}`;
+          if (existing) {
+            const day = ex.pivot?.day;
+            if (day && !existing.day.includes(day)) {
+              existing.day.push(day);
+            }
+          } else {
+            acc.push({
+              key,
+              exercise_id: ex.id,
+              name: ex.name,
+              sets: String(ex.pivot?.sets || ""),
+              reps: String(ex.pivot?.reps || ""),
+              day: ex.pivot?.day ? [ex.pivot.day] : [],
+            });
+          }
 
-                      const existing = acc.find((item) => item.key === key);
+          return acc;
+        }, []);
 
-                      if (existing) {
-                        const day = ex.pivot?.day;
+        setExercises([...groupedExercises, ...stored]);
+      } catch (err) {
+        console.error(err);
+        Alert.alert("Error", "Failed loading exercises");
+      }
+    }
 
-                        if (day && !existing.day.includes(day)) {
-                          existing.day.push(day);
-                        }
-
-                      } else {
-                        acc.push({
-                          key,
-                          exercise_id: ex.id,
-                          name: ex.name,
-                          sets: String(ex.pivot?.sets || ""),
-                          reps: String(ex.pivot?.reps || ""),
-                          day: ex.pivot?.day ? [ex.pivot.day] : [],
-                        });
-                      }
-
-                      return acc;
-                    },
-                    []
-                );
-
-                if (parsed) {
-                  setExercises([...groupedExercises, ...parsed]);
-                  AsyncStorage.removeItem("selectedExercises");
-                } else {
-                  setExercises(groupedExercises);
-                }
-              })
-              .catch((err) => {
-                console.error(err);
-                Alert.alert("Error", "Failed loading exercises");
-              });
-        })
-        .catch(console.error);
+    loadExercises();
   }, [id]);
 
   const handleUpdate = async (updated: Omit<Plan, "user_id">) => {
@@ -98,9 +94,9 @@ export default function EditPlanScreen() {
       const existing = await Plans.getExercises(Number(id));
 
       await Promise.all(
-          existing.exercises.map((ex: any) =>
-              Plans.deleteExercise(Number(id), ex.id)
-          )
+        existing.exercises.map((ex: any) =>
+          Plans.deleteExercise(Number(id), ex.id),
+        ),
       );
 
       let orderIndex = 1;
@@ -109,13 +105,13 @@ export default function EditPlanScreen() {
         const days = exercise.day.length ? exercise.day : ["monday"];
 
         return days.map((day) =>
-            Plans.attachExercise(Number(id), {
-              exercise_id: exercise.exercise_id,
-              sets: Number(exercise.sets) || 0,
-              reps: Number(exercise.reps) || 0,
-              day,
-              order_index: orderIndex++,
-            })
+          Plans.attachExercise(Number(id), {
+            exercise_id: exercise.exercise_id,
+            sets: Number(exercise.sets) || 0,
+            reps: Number(exercise.reps) || 0,
+            day,
+            order_index: orderIndex++,
+          }),
         );
       });
 
@@ -123,9 +119,8 @@ export default function EditPlanScreen() {
 
       setModalVisible(true);
 
-      AsyncStorage.removeItem("ExercisesScreen.navData");
+      setNavData(null);
       AsyncStorage.removeItem("PlanForm.data");
-
     } catch (err) {
       console.error(err);
       Alert.alert("Update failed");
@@ -146,31 +141,27 @@ export default function EditPlanScreen() {
 
   if (!plan)
     return (
-        <ActivityIndicator
-            size={32}
-            color={"#ccff00"}
-            style={styles.container}
-        />
+      <ActivityIndicator size={32} color={"#ccff00"} style={styles.container} />
     );
 
   return (
-      <ScrollView contentContainerStyle={styles.container}>
-        <PlanForm
-            initialValues={plan}
-            planId={Number(id)}
-            exercises={exercises}
-            submitLabel={isSaving ? "UPDATING..." : "UPDATE PLAN"}
-            onSubmit={handleUpdate}
-            onExercisesChange={setExercises}
-            onDelete={handleDelete}
-        />
+    <ScrollView contentContainerStyle={styles.container}>
+      <PlanForm
+        initialValues={plan}
+        planId={Number(id)}
+        exercises={exercises}
+        submitLabel={isSaving ? "UPDATING..." : "UPDATE PLAN"}
+        onSubmit={handleUpdate}
+        onExercisesChange={setExercises}
+        onDelete={handleDelete}
+      />
 
-        <SuccessModal
-            visible={modalVisible}
-            message="Success!"
-            onClose={() => setModalVisible(false)}
-        />
-      </ScrollView>
+      <SuccessModal
+        visible={modalVisible}
+        message="Success!"
+        onClose={() => setModalVisible(false)}
+      />
+    </ScrollView>
   );
 }
 

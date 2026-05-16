@@ -7,7 +7,10 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SelectedExercisesProvider>
-        <Stack screenOptions={{ headerShown: false }} initialRouteName="index" />
+        <Stack
+          screenOptions={{ headerShown: false }}
+          initialRouteName="index"
+        />
       </SelectedExercisesProvider>
     </QueryClientProvider>
   );
