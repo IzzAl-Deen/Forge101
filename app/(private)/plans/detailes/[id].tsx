@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useForm } from "react-hook-form";
 import { PlanHero } from "../../../../components/plan-details/PlanHero";
 
 import { PlanInfoCard } from "../../../../components/plan-details/PlanInfoCard";
@@ -19,24 +18,19 @@ import { SubscribeButton } from "../../../../components/plan-details/SubscribeBu
 import { usePlanDetails } from "../../../../hooks/usePlanDetails";
 import { usePlanActions } from "../../../../hooks/usePlanActions";
 
-type FormValues = {
-  planId: string;
-};
 
 export default function PlanDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { handleSubmit } = useForm<FormValues>({
-    defaultValues: { planId: id },
-  });
 
+  const planId = Number(id);
   const { planQuery, exercisesQuery } = usePlanDetails(id);
-  const { subscribe } = usePlanActions(undefined, id);
+  const { subscribe } = usePlanActions();
 
   const exercises = useMemo(() => exercisesQuery.data || [], [exercisesQuery.data]);
 
   const onSubmit = useCallback(() => {
-    subscribe.mutate();
-  }, [subscribe]);
+    subscribe.mutate(planId);
+  }, [subscribe, planId]);
 
   if (planQuery.isLoading) {
     return (
@@ -86,7 +80,10 @@ export default function PlanDetailsScreen() {
           </Text>
         </View>
 
-        <SubscribeButton loading={subscribe.isPending} onPress={handleSubmit(onSubmit)} />
+        <SubscribeButton
+          loading={subscribe.isPending}
+          onPress={onSubmit}
+        />
       </ScrollView>
     </SafeAreaView>
   );

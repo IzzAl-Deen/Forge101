@@ -90,7 +90,7 @@ export default function HomePlans() {
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.card}
-          //    onPress={() => router.push()}
+             onPress={() => router.push(`/(private)/plans/detailes/${item.id}`)}
           >
             <Image
               source={{

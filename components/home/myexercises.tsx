@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -66,6 +66,7 @@ export default function TodaysFocus() {
         }
     };
 
+
     if (!focusExercises.length) {
         return (
             <View style={styles.emptyContainer}>
@@ -110,9 +111,9 @@ export default function TodaysFocus() {
                                 {item.target_muscle?.toUpperCase()} •{" "}
                                 {item.pivot?.sets} SETS •{" "}
                                 {item.pivot?.reps} REPS
-                                {item.pivot?.day
+                                {/* {item.pivot?.day
                                     ? ` • ${item.pivot.day.toUpperCase()}`
-                                    : ""}
+                                    : ""} */}
                             </Text>
 
                             <Text style={styles.meta}>
