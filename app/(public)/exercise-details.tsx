@@ -1,11 +1,9 @@
-import { useSelectedExercises } from "@/contexts/SelectedExercisesContext";
 import { useExercise } from "@/hooks/use-exercise";
 import { DIFFICULTY_COLORS } from "@/types/exercise";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -27,8 +25,6 @@ export default function ExerciseDetailsScreen() {
     refetch,
   } = useExercise(id);
 
-  const { addExercise, removeExercise, isSelected } = useSelectedExercises();
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -48,7 +44,6 @@ export default function ExerciseDetailsScreen() {
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>EXERCISE DETAILS</Text>
-
           <View style={styles.headerSpace} />
         </View>
 
@@ -80,22 +75,6 @@ export default function ExerciseDetailsScreen() {
   const difficultyColor =
     DIFFICULTY_COLORS[exercise.difficulty?.toLowerCase()] ?? "#888";
 
-  const selected = isSelected(exercise.id);
-
-  const handlePlanPress = async () => {
-    try {
-      if (selected) {
-        await removeExercise(exercise.id);
-      } else {
-        await addExercise(exercise);
-      }
-
-      Alert.alert("Done", "Plan updated");
-    } catch {
-      Alert.alert("Error", "Try again");
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -104,7 +83,6 @@ export default function ExerciseDetailsScreen() {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>EXERCISE DETAILS</Text>
-
         <View style={styles.headerSpace} />
       </View>
 
@@ -167,17 +145,7 @@ export default function ExerciseDetailsScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={handlePlanPress}>
-          <Text style={styles.addBtnText}>
-            {selected ? "REMOVE FROM PLAN" : "ADD TO PLAN"}
-          </Text>
-
-          <Ionicons
-            name={selected ? "checkmark-circle-outline" : "add-circle-outline"}
-            size={20}
-            color="#000"
-          />
-        </TouchableOpacity>
+        <View style={styles.bottomSpace} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -324,22 +292,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "capitalize",
   },
-  addBtn: {
-    flexDirection: "row",
-    backgroundColor: "#C8FF00",
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 32,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  addBtnText: {
-    color: "#000",
-    fontWeight: "900",
-    fontSize: 14,
-    letterSpacing: 2,
+  bottomSpace: {
+    height: 32,
   },
 });

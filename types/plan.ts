@@ -1,8 +1,8 @@
 export type Plan = {
-  user_id: string;
+  id?: number;
   name: string;
-  difficulty: string;
-  duration_minutes: number;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  duration?: number;
   image_url?: string | null;
   created_by_user_id?: string;
 };
