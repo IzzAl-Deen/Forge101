@@ -4,7 +4,7 @@ import { SearchBar } from "@/components/SearchBar";
 import Header from "@/components/ui/header";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
@@ -30,7 +30,16 @@ export default function Home() {
                         router.push("/(private)/plans/(MySubscriptions)/MySubscriptions")
                     }
                 >
-                    <Text style={styles.buttonText}>My Subscriptions</Text>
+                    <Text style={styles.buttonText}>My Subscriptions</Text>      
+                </Pressable>
+
+                <Pressable
+                    style={styles.button}
+                    onPress={() =>
+                        router.push("/(private)/plans/create")
+                    }
+                >
+                    <Text style={styles.buttonText}>Create Plan</Text>      
                 </Pressable>
             </ScrollView>
         </SafeAreaView>

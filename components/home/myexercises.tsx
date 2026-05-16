@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import Plans from "@/api/plansApi";
+import { CachedExercise, getExercises, saveExercises } from "@/api/db/exerciseDB";
 
 type FocusExercise = {
     pivot: any;
@@ -24,7 +25,7 @@ type FocusExercise = {
 
 export default function TodaysFocus() {
     const [loading, setLoading] = useState(true);
-    const [focusExercises, setFocusExercises] = useState<FocusExercise[]>([]);
+    const [focusExercises, setFocusExercises] = useState<Array<CachedExercise & { pivot?: any }>>([]);
     const [fromplan, setFromPlan] = useState<string>("");
 
     useEffect(() => {
@@ -34,22 +35,52 @@ export default function TodaysFocus() {
     const fetchTodaysExercises = async () => {
         try {
             setLoading(true);
+
+            const cachedExercises = await getExercises();
+
+            if (cachedExercises.length) {
+                setFocusExercises(cachedExercises);
+            }
+
             const allPlans = await Plans.getAll();
 
-            if (!allPlans.length) return;
+            if (!allPlans.length) {
+                setFocusExercises([]);
+                return;
+            }
+
             const randomPlan =
                 allPlans[Math.floor(Math.random() * allPlans.length)];
 
             const response = await Plans.getExercises(randomPlan.id);
 
-            setFocusExercises(response.exercises);
+            setFocusExercises(response.exercises || []);
             setFromPlan(randomPlan.name);
+
+            await saveExercises(response.exercises);
         } catch (err) {
             console.error(err);
+            setFocusExercises([]);
         } finally {
             setLoading(false);
         }
     };
+
+    if (!focusExercises.length) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyEmoji}>🏋️</Text>
+
+                <Text style={styles.emptyTitle}>
+                    No focus workout yet
+                </Text>
+
+                <Text style={styles.emptySubtitle}>
+                    Create a training plan to see today's focus exercises.
+                </Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -71,15 +102,22 @@ export default function TodaysFocus() {
                         />
 
                         <View style={styles.content}>
-                            <Text style={styles.name}>{item.name}</Text>
-
-                            <Text style={styles.meta}>
-                                {item.target_muscle?.toUpperCase()} • {item.pivot.sets} SETS •{" "}
-                                {item.pivot.reps} REPS
-                                {item.pivot.day ? ` • ${item.pivot.day.toUpperCase()}` : ""}
+                            <Text style={styles.name}>
+                                {item.name}
                             </Text>
 
-                            <Text style={styles.meta}>From: {fromplan}</Text>
+                            <Text style={styles.meta}>
+                                {item.target_muscle?.toUpperCase()} •{" "}
+                                {item.pivot?.sets} SETS •{" "}
+                                {item.pivot?.reps} REPS
+                                {item.pivot?.day
+                                    ? ` • ${item.pivot.day.toUpperCase()}`
+                                    : ""}
+                            </Text>
+
+                            <Text style={styles.meta}>
+                                From: {fromplan}
+                            </Text>
                         </View>
 
                         <TouchableOpacity style={styles.playBtn}>
@@ -95,6 +133,40 @@ export default function TodaysFocus() {
 const styles = StyleSheet.create({
     container: {
         marginTop: 30,
+    },
+
+    center: {
+        justifyContent: "center",
+        alignItems: "center",
+        paddingVertical: 40,
+    },
+
+    emptyContainer: {
+        backgroundColor: "#1a1a1a",
+        borderRadius: 20,
+        padding: 30,
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 30,
+    },
+
+    emptyEmoji: {
+        fontSize: 42,
+        marginBottom: 10,
+    },
+
+    emptyTitle: {
+        color: "#fff",
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 6,
+    },
+
+    emptySubtitle: {
+        color: "#888",
+        fontSize: 14,
+        textAlign: "center",
+        lineHeight: 20,
     },
 
     title: {
