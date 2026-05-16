@@ -1,5 +1,5 @@
+import { useNav } from "@/contexts/NavContext";
 import { Plan } from "@/types/plan";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
 type Props = {
@@ -9,6 +9,7 @@ type Props = {
 
 export const useAddExercise = ({ planId, form }: Props) => {
   const router = useRouter();
+  const { setNavData } = useNav();
 
   const addExercise = async () => {
     const navData = {
@@ -22,10 +23,7 @@ export const useAddExercise = ({ planId, form }: Props) => {
       planDuration: String(form.duration_minutes),
     };
 
-    await AsyncStorage.setItem(
-      "ExercisesScreen.navData",
-      JSON.stringify(navData),
-    );
+    setNavData(navData);
     router.push("/(private)/exercises/ExercisesScreen");
   };
 

@@ -2,6 +2,7 @@ import Plans from "@/api/plansApi";
 import { PendingExercise } from "@/components/plan-exercises";
 import PlanForm from "@/components/planform";
 import SuccessModal from "@/components/success-plan-modal";
+import { useNav } from "@/contexts/NavContext";
 import { Plan } from "@/types/plan";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
@@ -11,11 +12,9 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet } from "react-native";
 export default function EditPlanScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [exercises, setExercises] = useState<PendingExercise[]>([]);
-
   const [isSaving, setIsSaving] = useState(false);
 
   const { id } = useLocalSearchParams();
-
   const [plan, setPlan] = useState<Omit<Plan, "user_id"> | null>(null);
 
   const loadPlan = useCallback(async () => {
@@ -37,54 +36,52 @@ export default function EditPlanScreen() {
     loadPlan();
   }, [loadPlan]);
 
+  const { setNavData } = useNav();
+
   useEffect(() => {
-    AsyncStorage.getItem("selectedExercises")
-      .then((saved) => {
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (exercises.length === 0) {
-            Plans.getExercises(Number(id))
-              .then((exercisesData) => {
-                const oldExercises = exercisesData.exercises.map((ex: any) => ({
-                  exercise_id: ex.id,
-                  name: ex.name,
-                  sets: String(ex.pivot?.sets || ""),
-                  reps: String(ex.pivot?.reps || ""),
-                  day: ex.pivot?.day ? [ex.pivot.day] : [],
-                }));
-                setExercises([...oldExercises, ...parsed]);
-                AsyncStorage.removeItem("selectedExercises").catch(
-                  console.error,
-                );
-              })
-              .catch((err) => {
-                console.error(err);
-                Alert.alert("Error", "Failed loading exercises");
-              });
-          } else {
-            setExercises((prev) => [...prev, ...parsed]);
-            AsyncStorage.removeItem("selectedExercises").catch(console.error);
-          }
-        } else if (exercises.length === 0) {
-          Plans.getExercises(Number(id))
-            .then((exercisesData) => {
-              setExercises(
-                exercisesData.exercises.map((ex: any) => ({
-                  exercise_id: ex.id,
-                  name: ex.name,
-                  sets: String(ex.pivot?.sets || ""),
-                  reps: String(ex.pivot?.reps || ""),
-                  day: ex.pivot?.day ? [ex.pivot.day] : [],
-                })),
-              );
-            })
-            .catch((err) => {
-              console.error(err);
-              Alert.alert("Error", "Failed loading exercises");
-            });
+    async function loadExercises() {
+      try {
+        const [savedExercises, res] = await Promise.all([
+          AsyncStorage.getItem("selectedExercises"),
+          Plans.getExercises(Number(id)),
+        ]);
+
+        const stored = savedExercises ? JSON.parse(savedExercises) : [];
+        if (savedExercises) {
+          await AsyncStorage.removeItem("selectedExercises");
         }
-      })
-      .catch(console.error);
+
+        const groupedExercises = res.exercises.reduce((acc: any[], ex: any) => {
+          const key = `${ex.id}-${ex.pivot?.sets}-${ex.pivot?.reps}`;
+          const existing = acc.find((item) => item.key === key);
+
+          if (existing) {
+            const day = ex.pivot?.day;
+            if (day && !existing.day.includes(day)) {
+              existing.day.push(day);
+            }
+          } else {
+            acc.push({
+              key,
+              exercise_id: ex.id,
+              name: ex.name,
+              sets: String(ex.pivot?.sets || ""),
+              reps: String(ex.pivot?.reps || ""),
+              day: ex.pivot?.day ? [ex.pivot.day] : [],
+            });
+          }
+
+          return acc;
+        }, []);
+
+        setExercises([...groupedExercises, ...stored]);
+      } catch (err) {
+        console.error(err);
+        Alert.alert("Error", "Failed loading exercises");
+      }
+    }
+
+    loadExercises();
   }, [id]);
 
   const handleUpdate = async (updated: Omit<Plan, "user_id">) => {
@@ -94,16 +91,18 @@ export default function EditPlanScreen() {
     try {
       await Plans.update(Number(id), updated as Plan);
 
-      let orderIndex = 1;
       const existing = await Plans.getExercises(Number(id));
+
       await Promise.all(
         existing.exercises.map((ex: any) =>
           Plans.deleteExercise(Number(id), ex.id),
         ),
       );
 
+      let orderIndex = 1;
+
       const requests = exercises.flatMap((exercise) => {
-        const days = exercise.day.length > 0 ? exercise.day : ["monday"];
+        const days = exercise.day.length ? exercise.day : ["monday"];
 
         return days.map((day) =>
           Plans.attachExercise(Number(id), {
@@ -117,9 +116,11 @@ export default function EditPlanScreen() {
       });
 
       await Promise.all(requests);
+
       setModalVisible(true);
-      AsyncStorage.removeItem("ExercisesScreen.navData").catch(console.error);
-      AsyncStorage.removeItem("PlanForm.data").catch(console.error);
+
+      setNavData(null);
+      AsyncStorage.removeItem("PlanForm.data");
     } catch (err) {
       console.error(err);
       Alert.alert("Update failed");
@@ -138,9 +139,10 @@ export default function EditPlanScreen() {
     }
   };
 
-
-
-  if (!plan) return <ActivityIndicator size={32} color={"#ccff00"} style={styles.container}/>;
+  if (!plan)
+    return (
+      <ActivityIndicator size={32} color={"#ccff00"} style={styles.container} />
+    );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -153,6 +155,7 @@ export default function EditPlanScreen() {
         onExercisesChange={setExercises}
         onDelete={handleDelete}
       />
+
       <SuccessModal
         visible={modalVisible}
         message="Success!"
@@ -167,11 +170,5 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: "#121212",
     padding: 24,
-  },
-  header: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 32,
   },
 });
