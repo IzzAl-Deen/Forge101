@@ -22,18 +22,35 @@ export const Header = ({ title }: HeaderProps) => {
 
 const styles = StyleSheet.create({
     header: {
-        height: 64,
+        height: 80,
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-end',
+        justifyContent: 'flex-end',
         paddingHorizontal: 20,
         backgroundColor: 'rgba(14,14,14,0.7)'
     },
-    backBtn: { padding: 8 },
-    headerTitle: {
-        color: '#cefc22',
-        fontSize: 16,
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+
+    },backIcon: {
+        color: '#f4ffc9',
+        fontSize: 24,
         fontWeight: 'bold',
         marginLeft: 10,
-        flex: 1
+    },
+    headerTitle: {
+        color: '#cefc22',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginLeft: 15,
+        flex: 1,
+        marginBottom:8
+
+
     },
 });

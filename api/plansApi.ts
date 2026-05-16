@@ -1,5 +1,5 @@
 import apiBase from "./ApiBase";
-import { Plan } from "../types/plan";
+import { Plan } from "@/types/plan";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 type AttachExerciseData = {
@@ -20,7 +20,14 @@ const Plans = {
         const response = await apiBase.get(`/plans/${id}/`);
         return response.data;
     },
-
+    createWithImage: async (formData: FormData) => {
+        const response = await apiBase.post("/plans/", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+        return response.data;
+    },
     create: async (plan: Plan) => {
         const response = await apiBase.post("/plans/", plan);
         return response.data;

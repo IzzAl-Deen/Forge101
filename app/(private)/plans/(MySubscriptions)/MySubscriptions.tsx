@@ -1,27 +1,54 @@
-import React from 'react';
+import {useCallback, useEffect} from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { myPlansService, UserPlan } from '@/api/MyPlansService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 
+import { myPlansService } from '@/api/MyPlansService';
 import { Header } from '@/components/MySubscriptionsScreen/Header';
 import { SubscriptionCard } from '@/components/MySubscriptionsScreen/SubscriptionCard';
 import { EmptyState } from '@/components/MySubscriptionsScreen/EmptyState';
 
+const CACHE_KEY = '@my_subscriptions_cache';
+
 const MySubscriptionsScreen = () => {
-    const { data: subscriptions, isLoading } = useQuery({
+    const { data: subscriptions = [], isLoading, error, refetch } = useQuery({
         queryKey: ['userSubscriptions'],
         queryFn: myPlansService.getUserSubscriptions,
-        refetchInterval: 5000,
-        refetchOnWindowFocus: true,
+        staleTime: 0,
+        initialData: undefined,
     });
 
-    if (isLoading) {
+    useEffect(() => {
+        if (subscriptions && subscriptions.length > 0) {
+            AsyncStorage.setItem(CACHE_KEY, JSON.stringify(subscriptions))
+                .catch(console.error);
+        }
+    }, [subscriptions]);
+
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
+
+    if (isLoading && subscriptions.length === 0) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#cefc22" />
                     <Text style={styles.loadingText}>Loading your workouts...</Text>
                 </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (error && subscriptions.length === 0) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <Text style={{ color: 'red', textAlign: 'center', marginTop: 50 }}>
+                    Error loading subscriptions
+                </Text>
             </SafeAreaView>
         );
     }
@@ -33,7 +60,7 @@ const MySubscriptionsScreen = () => {
             <FlatList
                 data={subscriptions}
                 renderItem={({ item, index }) => <SubscriptionCard item={item} index={index} />}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item, index) => item?.id ? item.id.toString() : `sub-${index}`}
                 ListEmptyComponent={EmptyState}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}

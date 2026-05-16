@@ -1,5 +1,6 @@
 import Exercises from "@/api/exerciseApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
@@ -40,56 +41,56 @@ export function useExerciseDetails() {
     selectedIds?: string;
   }>();
   const [items, setItems] = useState<ExerciseFormItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [navData, setNavData] = useState<NavData | null>(null);
 
+  const { data: selectedItems = [], isLoading: loading } = useQuery<
+    ExerciseFormItem[]
+  >({
+    queryKey: ["selectedExercises", selectedIds],
+    queryFn: async () => {
+      const response = await Exercises.getAll(1, 100);
+      const ids = selectedIds
+        ? selectedIds
+            .split(",")
+            .map((item) => Number(item))
+            .filter((item) => !Number.isNaN(item))
+        : [];
+
+      return response.data
+        .filter((exercise) => exercise.id != null && ids.includes(exercise.id))
+        .map((exercise) => ({
+          exercise_id: exercise.id!,
+          name: exercise.name,
+          target_muscle: exercise.target_muscle,
+          category: exercise.category,
+          image_url: exercise.image_url,
+          sets: "3",
+          reps: "10",
+          day: ["monday"],
+        }));
+    },
+    enabled: !!selectedIds,
+  });
+
   useEffect(() => {
-    async function loadData() {
+    async function loadNavData() {
       try {
         const savedNav = await AsyncStorage.getItem("ExercisesScreen.navData");
         if (savedNav) {
           setNavData(JSON.parse(savedNav));
         }
-
-        if (!selectedIds) {
-          setLoading(false);
-          return;
-        }
-
-        setLoading(true);
-
-        const response = await Exercises.getAll(1, 100);
-        const ids = selectedIds
-          .split(",")
-          .map((item) => Number(item))
-          .filter((item) => !Number.isNaN(item));
-
-        const selected = ids
-          .map((id) => response.data.find((exercise) => exercise.id === id))
-          .filter(Boolean)
-          .map((exercise) => ({
-            exercise_id: exercise!.id!,
-            name: exercise!.name,
-            target_muscle: exercise!.target_muscle,
-            category: exercise!.category,
-            image_url: exercise!.image_url,
-            sets: "3",
-            reps: "10",
-            day: ["monday"],
-          }));
-
-        setItems(selected);
       } catch (error) {
-        console.error("Failed to load data:", error);
-        Alert.alert("Error", "Failed to load exercises");
-      } finally {
-        setLoading(false);
+        console.error("Failed to load nav data:", error);
       }
     }
 
-    loadData();
-  }, [selectedIds]);
+    loadNavData();
+  }, []);
+
+  useEffect(() => {
+    setItems(selectedItems);
+  }, [selectedItems]);
 
   function updateItem(
     exerciseId: number,
