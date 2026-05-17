@@ -19,7 +19,7 @@ export default function Home() {
             <Header title="Home" />
             <ScrollView>
 
-                <SearchBar value={searchQuery} onChangeText={handleSearchChange} />
+                {/* <SearchBar value={searchQuery} onChangeText={handleSearchChange} /> */}
 
                 <HomePlans />
                 <TodaysFocus />
