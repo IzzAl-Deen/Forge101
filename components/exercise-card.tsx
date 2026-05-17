@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/hooks/use-auth";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Exercise } from "../types/exercise";
 import { DIFFICULTY_COLORS } from "../types/exercise";
@@ -11,12 +12,13 @@ type Props = {
 
 export const ExerciseCard = ({ item }: Props) => {
   const router = useRouter();
+  const { session } = useAuth();
   const color = DIFFICULTY_COLORS[item.difficulty?.toLowerCase()] ?? "#888";
 
   const openDetails = () => {
     router.push({
-      pathname: "/(public)/exercise-details",
-      params: { id: item.id },
+      pathname: session ? "/(private)/exercises/[id]" : "/(public)/exercise-details",
+      params: { id: String(item.id) },
     });
   };
 

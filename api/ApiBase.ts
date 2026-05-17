@@ -4,8 +4,8 @@ import { Platform } from "react-native";
 
 const API_BASE_URL =
   Platform.OS === "android"
-    ? "http://10.0.2.2:8000/api/v1"
-    : "http://127.0.0.1:8000/api/v1";
+    ? "https://forge101-backend-main-h4u9nt.laravel.cloud/api/v1"
+    : "https://forge101-backend-main-h4u9nt.laravel.cloud/api/v1";
 
 const apiBase = axios.create({
   baseURL: API_BASE_URL,

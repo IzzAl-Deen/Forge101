@@ -49,16 +49,29 @@ export default function CreatePlanScreen() {
     }
   }, [selectedImage]);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.85,
-    });
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-    }
+const pickImage = async () => {
+  // 1. Request permission first
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (status !== "granted") {
+    Alert.alert(
+      "Permission required",
+      "We need access to your photos to select an image."
+    );
+    return;
+  }
+
+  // 2. Open gallery only if granted
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [16, 9],
+    quality: 0.85,
+  });
+
+  if (!result.canceled) {
+    setSelectedImage(result.assets[0].uri);
+  }
   };
 
   const createPlanMutation = useMutation({
